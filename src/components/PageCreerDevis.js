@@ -151,8 +151,28 @@ const PageCreerDevis = ({ darkMode }) => {
     dimension: '',
     type: '',
     prix: '',
-    caratage: ''
+    caratage: '',
+    fournisseur: 'TGN 409',
+    quantite: 1
   }]);
+  
+  
+  
+  const ajouterAutrePierre = () => {
+    setAutresPierres(prev => [...prev, {
+      forme: '',
+      dimension: '',
+      type: '',
+      prix: '',
+      caratage: '',
+      fournisseur: 'TGN 409',
+      quantite: 1
+    }]);
+  };
+  
+  const supprimerAutrePierre = (index) => {
+    setAutresPierres(prev => prev.filter((_, i) => i !== index));
+  };
 
   const [coutsSertissage, setCoutsSertissage] = useState(0);
   const [prixCAO, setPrixCAO] = useState(0);
@@ -381,7 +401,7 @@ const PageCreerDevis = ({ darkMode }) => {
           </div>
           <div>
             <label className={labelClass}>Diamants</label>
-            <div className="grid grid-cols-5 gap-2 mb-2 font-bold">
+            <div className="grid grid-cols-5 gap-2 mb-2 font-bold text-sm">
               <div>Taille</div>
               <div>Quantité</div>
               <div>Fourni par</div>
@@ -389,7 +409,7 @@ const PageCreerDevis = ({ darkMode }) => {
               <div></div>
             </div>
             {devis.diamants.map((diamant, index) => (
-              <div key={index} className="grid grid-cols-5 gap-2 mb-2">
+              <div key={index} className="grid grid-cols-5 gap-2 mb-2 items-center">
                 <select
                   value={diamant.taille}
                   onChange={(e) => handleDiamantChange(index, 'taille', e.target.value)}
@@ -406,7 +426,7 @@ const PageCreerDevis = ({ darkMode }) => {
                   onChange={(e) => handleDiamantChange(index, 'quantite', e.target.value)}
                   placeholder="Quantité"
                   className={inputClass}
-                  min="0"
+                  min="1"
                 />
                 <select
                   value={diamant.fournisseur}
@@ -426,15 +446,13 @@ const PageCreerDevis = ({ darkMode }) => {
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
-                {devis.diamants.length > 1 && (
-                  <button
-                    onClick={() => handleDiamantRemove(index)}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                    type="button"
-                  >
-                    Supprimer
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDiamantRemove(index)}
+                  className="text-red-500 hover:text-red-700"
+                  type="button"
+                >
+                  ✕
+                </button>
               </div>
             ))}
             <button
@@ -447,16 +465,17 @@ const PageCreerDevis = ({ darkMode }) => {
           </div>
           <div>
             <label className={labelClass}>Autres Pierres</label>
-            <div className="grid grid-cols-6 gap-2 mb-2 font-bold">
+            <div className="grid grid-cols-7 gap-2 mb-2 font-bold text-sm">
               <div>Forme</div>
               <div>Dimension</div>
               <div>Type</div>
               <div>Prix</div>
               <div>Caratage</div>
-              <div></div>
+              <div>Fourni par</div>
+              <div>Quantité</div>
             </div>
             {autresPierres.map((pierre, index) => (
-              <div key={index} className="grid grid-cols-6 gap-2 mb-2">
+              <div key={index} className="grid grid-cols-7 gap-2 mb-2 items-center">
                 <select
                   value={pierre.forme}
                   onChange={(e) => handleAutrePierreChange(index, 'forme', e.target.value)}
@@ -498,19 +517,35 @@ const PageCreerDevis = ({ darkMode }) => {
                   placeholder="Caratage"
                   className={inputClass}
                 />
-                {autresPierres.length > 1 && (
+                <select
+                  value={pierre.fournisseur}
+                  onChange={(e) => handleAutrePierreChange(index, 'fournisseur', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="TGN 409">TGN 409</option>
+                  <option value="Client">Client</option>
+                </select>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    value={pierre.quantite}
+                    onChange={(e) => handleAutrePierreChange(index, 'quantite', e.target.value)}
+                    placeholder="Quantité"
+                    className={`${inputClass} w-16 mr-2`}
+                    min="1"
+                  />
                   <button
-                    onClick={() => setAutresPierres(prev => prev.filter((_, i) => i !== index))}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    onClick={() => supprimerAutrePierre(index)}
+                    className="text-red-500 hover:text-red-700"
                     type="button"
                   >
-                    Supprimer
+                    ✕
                   </button>
-                )}
+                </div>
               </div>
             ))}
             <button
-              onClick={() => setAutresPierres(prev => [...prev, { forme: '', dimension: '', type: '', prix: '', caratage: '' }])}
+              onClick={ajouterAutrePierre}
               className={`${buttonClass} mt-2`}
               type="button"
             >
