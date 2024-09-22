@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PriceInput from './PriceInput';
+import TimeInputSeparate from './TimeInputSeparate';
 
 const PageCreerDevis = ({ darkMode }) => {
   const [devis, setDevis] = useState({
@@ -6,6 +8,7 @@ const PageCreerDevis = ({ darkMode }) => {
     client: '',
     titre: '',
     description: '',
+    commentairePrivé: '',
     categorieBijou: '',
     metal: '',
     taille: '',
@@ -14,11 +17,11 @@ const PageCreerDevis = ({ darkMode }) => {
     dessertissage: false,
     rhodiage: false,
     temps: {
-      administratif: { heures: 0, minutes: 0 },
-      CAO: { heures: 0, minutes: 0 },
-      repare: { heures: 0, minutes: 0 },
-      polissage: { heures: 0, minutes: 0 },
-      dessertissage: { heures: 0, minutes: 0 }
+      administratif: { hours: 0, minutes: 0 },
+      cao: { hours: 0, minutes: 0 },
+      repare: { hours: 0, minutes: 0 },
+      polissage: { hours: 0, minutes: 0 },
+      dessertissage: { hours: 0, minutes: 0 }
     },
     tarifFonte: '',
     tarifImpressionCire: '',
@@ -27,12 +30,15 @@ const PageCreerDevis = ({ darkMode }) => {
     remiseGenerale: '',
     imagePrincipale: null,
     galerie: [],
-    diamants: []
+    diamants: [{ taille: '', quantite: 0, sertissage: '', fournisseur: 'TGN 409' }],
+    poidsEstime: ''
   });
+  // Génération du numéro de devis
+  useEffect(() => {
+    const nouveauNumero = `DEV-${Date.now()}`;
+    setDevis(prev => ({ ...prev, numero: nouveauNumero }));
+  }, []);
 
-  const [totalHT, setTotalHT] = useState(0);
-  const [totalTVA, setTotalTVA] = useState(0);
-  const [totalTTC, setTotalTTC] = useState(0);
 
   const clients = [
     { id: 1, nom: 'david gusky', societe: 'DAVIDOR' },
@@ -47,10 +53,7 @@ const PageCreerDevis = ({ darkMode }) => {
 
   const methodesLivraison = ['Sur site', 'VD la poste', 'DHL', 'Fedex'];
 
-  useEffect(() => {
-    const nouveauNumero = `DEV-${Date.now()}`;
-    setDevis(prev => ({ ...prev, numero: nouveauNumero }));
-  }, []);
+  
 
   const typesSertissage = [
     'Serti grain', 'Serti rail', 'Serti copeaux', 'Serti clos', 'Serti descendu', 'Serti masse'
@@ -61,25 +64,39 @@ const PageCreerDevis = ({ darkMode }) => {
     '2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '3.0', '3.1', '3.2'
   ];
 
+  const [autresPierres, setAutresPierres] = useState([{
+    forme: '',
+    dimension: '',
+    type: '',
+    prix: '',
+    caratage: ''
+  }]);
+
+  const [totalHT, setTotalHT] = useState(0);
+  const [totalTVA, setTotalTVA] = useState(0);
+  const [totalTTC, setTotalTTC] = useState(0);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setDevis(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleTimeChange = (type, unit, value) => {
-    setDevis(prev => ({
-      ...prev,
-      temps: {
-        ...prev.temps,
-        [type]: {
-          ...prev.temps[type],
-          [unit]: parseInt(value) || 0
-        }
+    setDevis(prev => {
+      if (name.startsWith('temps')) {
+        const timeType = name.replace('temps', '').toLowerCase();
+        return {
+          ...prev,
+          temps: {
+            ...prev.temps,
+            [timeType]: {
+              ...prev.temps[timeType],
+              ...(typeof value === 'object' ? value : {})
+            }
+          }
+        };
       }
-    }));
+      return {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+    });
   };
 
   const handleDiamantAdd = () => {
@@ -93,7 +110,7 @@ const PageCreerDevis = ({ darkMode }) => {
     setDevis(prev => ({
       ...prev,
       diamants: prev.diamants.map((diamant, i) => 
-        i === index ? { ...diamant, [field]: value } : diamant
+        i === index ? { ...diamant, [field]: field === 'quantite' ? parseInt(value) || 0 : value } : diamant
       )
     }));
   };
@@ -105,28 +122,10 @@ const PageCreerDevis = ({ darkMode }) => {
     }));
   };
 
-  const parseTimeToMinutes = (timeString) => {
-    const match = timeString.match(/^(\d+)(?:h|H)?(?:(\d+)(?:m|M)?)?$/);
-    if (match) {
-      const hours = parseInt(match[1] || 0);
-      const minutes = parseInt(match[2] || 0);
-      return hours * 60 + minutes;
-    }
-    return 0;
-  };
-
-  const formatMinutesToTime = (minutes) => {
-    if (!minutes) return '';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours && mins) return `${hours}h${mins}`;
-    if (hours) return `${hours}h`;
-    return `${mins}min`;
-  };
-
-  const handleTarifChange = (e, field) => {
-    const { value } = e.target;
-    setDevis(prev => ({ ...prev, [field]: value }));
+  const handleAutrePierreChange = (index, field, value) => {
+    setAutresPierres(prev => prev.map((pierre, i) => 
+      i === index ? { ...pierre, [field]: value } : pierre
+    ));
   };
 
   const handleImageChange = (e) => {
@@ -141,18 +140,46 @@ const PageCreerDevis = ({ darkMode }) => {
     }
   };
 
-  useEffect(() => {
-    // Logique de calcul des totaux
-    const sousTotal = 1000; // À remplacer par votre calcul réel
-    const remise = sousTotal * (parseFloat(devis.remiseGenerale) / 100);
-    const ht = sousTotal - remise;
-    const tva = ht * 0.2; // Supposons une TVA de 20%
-    setTotalHT(ht);
-    setTotalTVA(tva);
-    setTotalTTC(ht + tva);
-  }, [devis]);
+//  const formatTime = (timeObj) => {
+//    const { hours, minutes } = timeObj;
+//    if (hours === 0 && minutes === 0) return '0min';
+//    if (hours === 0) return `${minutes}min`;
+//    if (minutes === 0) return `${hours}h`;
+//    return `${hours}h${minutes}min`;
+//  };
+  
 
-  const inputClass = `w-full p-2 border rounded ${darkMode ? 'dark:bg-gray-700 dark:border-gray-600' : 'border-gray-300'} focus:border-teal-500 focus:ring focus:ring-teal-200`;
+useEffect(() => {
+  const calculerPrixDiamants = () => {
+    return devis.diamants.reduce((total, diamant) => {
+      // Logique de calcul du prix des diamants
+      return total + (diamant.quantite * 100); // Prix fictif, à ajuster
+    }, 0);
+  };
+
+  const calculerPrixAutresPierres = () => {
+    return autresPierres.reduce((total, pierre) => {
+      return total + parseFloat(pierre.prix || 0);
+    }, 0);
+  };
+  
+
+  const prixMetal = (devis.poidsEstime || 0) * 50; // Prix fictif au gramme, à ajuster
+
+  const sousTotal = calculerPrixDiamants() + calculerPrixAutresPierres() + prixMetal;
+  const remise = sousTotal * (parseFloat(devis.remiseGenerale) / 100);
+  const ht = sousTotal - remise;
+  const tva = ht * 0.2; // TVA de 20%
+  setTotalHT(ht);
+  setTotalTVA(tva);
+  setTotalTTC(ht + tva);
+}, [devis, autresPierres]);
+
+  const inputClass = `w-full p-2 border rounded ${
+    darkMode
+      ? 'bg-gray-700 border-gray-600 text-white'
+      : 'bg-white border-gray-300 text-gray-900'
+  } focus:border-teal-500 focus:ring focus:ring-teal-200`;
   const labelClass = 'block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300';
   const buttonClass = 'bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50';
 
@@ -182,6 +209,16 @@ const PageCreerDevis = ({ darkMode }) => {
             <textarea name="description" value={devis.description} onChange={handleChange} className={inputClass} rows="3"></textarea>
           </div>
           <div>
+  <label className={labelClass}>Commentaire privé</label>
+  <textarea
+    name="commentairePrivé"
+    value={devis.commentairePrivé}
+    onChange={handleChange}
+    className={`${inputClass} h-24`}
+    placeholder="Commentaire visible uniquement en interne"
+  ></textarea>
+</div>
+          <div>
             <label className={labelClass}>Catégorie du bijou</label>
             <select name="categorieBijou" value={devis.categorieBijou} onChange={handleChange} className={inputClass}>
               <option value="">Sélectionner une catégorie</option>
@@ -190,7 +227,21 @@ const PageCreerDevis = ({ darkMode }) => {
               ))}
             </select>
           </div>
+          <div>
+  <label className={labelClass}>Poids estimé du métal (g)</label>
+  <input
+    type="number"
+    name="poidsEstime"
+    value={devis.poidsEstime || ''}
+    onChange={handleChange}
+    className={inputClass}
+    min="0"
+    step="0.1"
+  />
+  
+</div>
         </div>
+        
 
         {/* Colonne 2 */}
         <div className="space-y-4">
@@ -226,6 +277,144 @@ const PageCreerDevis = ({ darkMode }) => {
             </label>
           </div>
           <div>
+  <label className={labelClass}>Diamants</label>
+  <div className="grid grid-cols-5 gap-2 mb-2 font-bold">
+  <div>Taille</div>
+  <div>Quantité</div>
+  <div>Fourni par</div>
+  <div>Sertissage</div>
+  <div></div>
+</div>
+  {devis.diamants.map((diamant, index) => (
+    <div key={index} className="grid grid-cols-5 gap-2 mb-2">
+      <select
+        value={diamant.taille}
+        onChange={(e) => handleDiamantChange(index, 'taille', e.target.value)}
+        className={inputClass}
+      >
+        <option value="">Taille</option>
+        {taillesDiamant.map(taille => (
+          <option key={taille} value={taille}>{taille} mm</option>
+        ))}
+      </select>
+      <input
+        type="number"
+        value={diamant.quantite}
+        onChange={(e) => handleDiamantChange(index, 'quantite', e.target.value)}
+        placeholder="Quantité"
+        className={inputClass}
+        min="0"
+      />
+      <select
+        value={diamant.fournisseur}
+        onChange={(e) => handleDiamantChange(index, 'fournisseur', e.target.value)}
+        className={inputClass}
+      >
+        <option value="TGN 409">TGN 409</option>
+        <option value="Client">Client</option>
+      </select>
+      <select
+        value={diamant.sertissage}
+        onChange={(e) => handleDiamantChange(index, 'sertissage', e.target.value)}
+        className={inputClass}
+      >
+        <option value="">Type de sertissage</option>
+        {typesSertissage.map(type => (
+          <option key={type} value={type}>{type}</option>
+        ))}
+      </select>
+      {devis.diamants.length > 1 && (
+        <button 
+          onClick={() => handleDiamantRemove(index)} 
+          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+          type="button"
+        >
+          Supprimer
+        </button>
+      )}
+    </div>
+  ))}
+  <button 
+    onClick={handleDiamantAdd} 
+    className={`${buttonClass} mt-2`}
+    type="button"
+  >
+    Ajouter un diamant
+  </button>
+</div>
+<div>
+  <label className={labelClass}>Autres Pierres</label>
+  <div className="grid grid-cols-6 gap-2 mb-2 font-bold">
+    <div>Forme</div>
+    <div>Dimension</div>
+    <div>Type</div>
+    <div>Prix</div>
+    <div>Caratage</div>
+    <div></div>
+  </div>
+  {autresPierres.map((pierre, index) => (
+    <div key={index} className="grid grid-cols-6 gap-2 mb-2">
+      <select
+        value={pierre.forme}
+        onChange={(e) => handleAutrePierreChange(index, 'forme', e.target.value)}
+        className={inputClass}
+      >
+        <option value="">Forme</option>
+        {['Ronde', 'Poire', 'Princesse', 'Rpc', 'Coeur'].map(forme => (
+          <option key={forme} value={forme}>{forme}</option>
+        ))}
+      </select>
+      <input
+        type="text"
+        value={pierre.dimension}
+        onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)}
+        placeholder="Dimension"
+        className={inputClass}
+      />
+      <select
+        value={pierre.type}
+        onChange={(e) => handleAutrePierreChange(index, 'type', e.target.value)}
+        className={inputClass}
+      >
+        <option value="">Type de pierre</option>
+        {['Diamant', 'Saphir', 'Rubis', 'Émeraude'].map(type => (
+          <option key={type} value={type}>{type}</option>
+        ))}
+      </select>
+      <input
+        type="number"
+        value={pierre.prix}
+        onChange={(e) => handleAutrePierreChange(index, 'prix', e.target.value)}
+        placeholder="Prix"
+        className={inputClass}
+      />
+      <input
+        type="number"
+        value={pierre.caratage}
+        onChange={(e) => handleAutrePierreChange(index, 'caratage', e.target.value)}
+        placeholder="Caratage"
+        className={inputClass}
+      />
+      {autresPierres.length > 1 && (
+        <button 
+          onClick={() => setAutresPierres(prev => prev.filter((_, i) => i !== index))}
+          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+          type="button"
+        >
+          Supprimer
+        </button>
+      )}
+    </div>
+  ))}
+  <button 
+    onClick={() => setAutresPierres(prev => [...prev, { forme: '', dimension: '', type: '', prix: '', caratage: '' }])}
+    className={`${buttonClass} mt-2`}
+    type="button"
+  >
+    Ajouter une autre pierre
+  </button>
+</div>
+          <div>
             <label className={labelClass}>Image principale</label>
             <input type="file" onChange={handleImageChange} className={inputClass} />
           </div>
@@ -237,30 +426,34 @@ const PageCreerDevis = ({ darkMode }) => {
 
         {/* Colonne 3 */}
         <div className="space-y-4">
-          {['Administratif', 'CAO', 'Repare', 'Polissage', 'Dessertissage'].map((type) => (
-            <div key={type} className={type === 'Dessertissage' && !devis.dessertissage ? 'hidden' : ''}>
-              <label className={labelClass}>{`Temps ${type}`}</label>
-              <input
-                type="text"
-                value={formatMinutesToTime(devis[`temps${type}`])}
-                onChange={(e) => handleTimeChange(e, `temps${type}`)}
-                className={inputClass}
-                placeholder="ex: 1h30, 45min"
-              />
-            </div>
-          ))}
+        {['Administratif', 'CAO', 'Repare', 'Polissage', 'Dessertissage'].map((type) => {
+  const lowercaseType = type.toLowerCase();
+  const timeValue = devis.temps[lowercaseType] || { hours: 0, minutes: 0 };
+  
+  return (
+    <div key={type} className={type === 'Dessertissage' && !devis.dessertissage ? 'hidden' : ''}>
+      <label className={labelClass}>{`Temps ${type}`}</label>
+      <TimeInputSeparate
+        name={`temps${type}`}
+        hours={timeValue.hours}
+        minutes={timeValue.minutes}
+        onChange={handleChange}
+        darkMode={darkMode}
+      />
+    </div>
+  );
+})}
           {['Fonte', 'ImpressionCire', 'ImpressionResine'].map((type) => (
-            <div key={type}>
-              <label className={labelClass}>{`Tarif ${type.replace(/([A-Z])/g, ' $1').trim()}`}</label>
-              <input
-                type="text"
-                value={devis[`tarif${type}`]}
-                onChange={(e) => handleTarifChange(e, `tarif${type}`)}
-                className={inputClass}
-                placeholder="Entrez le montant"
-              />
-            </div>
-          ))}
+  <div key={type}>
+    <label className={labelClass}>{`Tarif ${type.replace(/([A-Z])/g, ' $1').trim()}`}</label>
+    <PriceInput
+      name={`tarif${type}`}
+      value={devis[`tarif${type}`]}
+      onChange={handleChange}
+      darkMode={darkMode}
+    />
+  </div>
+))}
         </div>
 
 {/* Détails du prix */}
