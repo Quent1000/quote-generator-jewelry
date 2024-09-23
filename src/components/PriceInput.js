@@ -34,7 +34,7 @@ const PriceInput = ({ value, onChange, name, darkMode }) => {
     }
   };
 
-  const inputClass = `w-full p-2 border rounded ${
+  const inputClass = `w-full p-1 text-xs border rounded ${
     darkMode
       ? 'bg-gray-700 border-gray-600 text-white'
       : 'bg-white border-gray-300 text-gray-900'

@@ -76,7 +76,7 @@ function DevisApp() {
           </div>
         </nav>
 
-        <main className={`flex-grow overflow-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} p-6`}>
+        <main className={`flex-grow overflow-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} p-0`}>
           <Routes>
             <Route path="/" element={<PageTableauDeBord darkMode={darkMode} />} />
             <Route path="/creer-devis" element={<PageCreerDevis darkMode={darkMode} />} />
