@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import PriceInput from './PriceInput';
+import PriceInput from '../components/PriceInput';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useAppContext } from '../context/AppContext';
 
 const TimeInput = ({ label, hours, minutes, onChange, price, darkMode }) => {
   const selectClass = `w-full p-1 text-xs border rounded ${
@@ -44,7 +46,9 @@ const TimeInput = ({ label, hours, minutes, onChange, price, darkMode }) => {
   );
 };
 
-const PageCreerDevis = ({ darkMode }) => {
+const PageCreerDevis = () => {
+  const { darkMode } = useAppContext();
+
   const [devis, setDevis] = useState({
     numero: '',
     client: '',
@@ -71,9 +75,10 @@ const PageCreerDevis = ({ darkMode }) => {
     methodeLivraison: '',
     remiseGenerale: '',
     images: [],
-    diamants: [{ taille: '', quantite: 0, sertissage: '', fournisseur: 'TGN 409' }],
+    diamants: [{ taille: '', quantite: 0, sertissage: 'Serti grain', fournisseur: 'TGN 409' }],
     poidsEstime: '',
     styleGravure: '',
+    prixLivraison: 0,
   });
   // Génération du numéro de devis
   useEffect(() => {
@@ -92,10 +97,6 @@ const PageCreerDevis = ({ darkMode }) => {
   ];
 
   const metaux = ['JAUNE', 'GRIS', 'GPD', 'ROUGE 5N', 'ROSE 4N'];
-
-  const methodesLivraison = ['Sur site', 'VD la poste', 'DHL', 'Fedex'];
-
-
 
   const typesSertissage = [
     'Serti grain', 'Serti rail', 'Serti copeaux', 'Serti clos', 'Serti descendu', 'Serti masse'
@@ -135,17 +136,50 @@ const PageCreerDevis = ({ darkMode }) => {
     "3.0": { prixCarat: 1088, poidsUnit: 0.12 },
     "3.25": { prixCarat: 1088, poidsUnit: 0.13 },
   }), []);
-  const prixSertissage = useMemo(() => ({
-    "Serti grain": 3,
-    "Serti rail": 4,
-    "Serti copeaux": 5,
-    "Serti clos": 6,
-    "Serti descendu": 7,
-    "Serti masse": 8
-  }), []);
 
-  const tauxHoraire = useMemo(() => 50, []); // Définissez le taux horaire approprié
+  const [parametres, setParametres] = useState({
+    tauxHoraireCAO: 50,
+    tauxHoraireBijouterie: 50,
+    tauxHoraireAdministratif: 50,
+    prixSertissage: {
+      "Serti grain": 3,
+      "Serti rail": 4,
+      "Serti copeaux": 5,
+      "Serti clos": 6,
+      "Serti descendu": 7,
+      "Serti masse": 8
+    },
+    prixGravure: {
+      "Manuscrite": 20,
+      "Bâton": 15
+    },
+    prixMetaux: {
+      "JAUNE": 50000,
+      "GRIS": 55000,
+      "GPD": 60000,
+      "ROUGE 5N": 58000,
+      "ROSE 4N": 56000
+    },
+    prixRhodiage: 30,
+    prixLivraison: {
+      "Sur site": 0,
+      "VD la poste": 10,
+      "DHL": 20,
+      "Fedex": 25
+    }
+  });
 
+  useEffect(() => {
+    const savedParams = localStorage.getItem('parametresDevis');
+    if (savedParams) {
+      try {
+        const parsedParams = JSON.parse(savedParams);
+        setParametres(prev => ({...prev, ...parsedParams}));
+      } catch (error) {
+        console.error("Erreur lors du parsing des paramètres:", error);
+      }
+    }
+  }, []);
 
   const [autresPierres, setAutresPierres] = useState([{
     forme: '',
@@ -183,9 +217,19 @@ const PageCreerDevis = ({ darkMode }) => {
   const [totalTVA, setTotalTVA] = useState(0);
   const [totalTTC, setTotalTTC] = useState(0);
 
+  const [prixGravure, setPrixGravure] = useState(0);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setDevis(prev => {
+      if (name === 'prixLivraison') {
+        return { ...prev, [name]: parseFloat(value) || 0 };
+      }
+      if (name === 'remiseGenerale') {
+        // Assurez-vous que la valeur est un nombre entre 0 et 100
+        const remise = Math.max(0, Math.min(100, Number(value) || 0));
+        return { ...prev, [name]: remise };
+      }
       if (name.startsWith('temps')) {
         const timeType = name.replace('temps', '').toLowerCase();
         return {
@@ -207,19 +251,25 @@ const PageCreerDevis = ({ darkMode }) => {
   };
 
   const handleDiamantAdd = () => {
-    setDevis(prev => ({
-      ...prev,
-      diamants: [...prev.diamants, { taille: '', quantite: 0, sertissage: '' }]
-    }));
+    setDevis(prev => {
+      const newDiamants = [...prev.diamants, { taille: '', quantite: 0, fournisseur: 'TGN 409', sertissage: 'Serti grain' }];
+      return {
+        ...prev,
+        diamants: newDiamants
+      };
+    });
   };
 
   const handleDiamantChange = (index, field, value) => {
-    setDevis(prev => ({
-      ...prev,
-      diamants: prev.diamants.map((diamant, i) =>
+    setDevis(prev => {
+      const newDiamants = prev.diamants.map((diamant, i) =>
         i === index ? { ...diamant, [field]: field === 'quantite' ? parseInt(value) || 0 : value } : diamant
-      )
-    }));
+      );
+      return {
+        ...prev,
+        diamants: newDiamants
+      };
+    });
   };
 
   const handleDiamantRemove = (index) => {
@@ -250,24 +300,14 @@ const PageCreerDevis = ({ darkMode }) => {
     }));
   };
 
-  //  const formatTime = (timeObj) => {
-  //    const { hours, minutes } = timeObj;
-  //    if (hours === 0 && minutes === 0) return '0min';
-  //    if (hours === 0) return `${minutes}min`;
-  //    if (minutes === 0) return `${hours}h`;
-  //    return `${hours}h${minutes}min`;
-  //  };
-
-
-
   useEffect(() => {
     const calculerPrixDiamants = () => {
       let totalSertissage = 0;
-      const totalPrix = devis.diamants.reduce((total, diamant) => {
+      const totalPrix = (devis.diamants || []).reduce((total, diamant) => {
         const data = diamantData[diamant.taille];
-        if (data) {
+        if (data && parametres.prixSertissage && diamant.sertissage) {
           const prix = data.prixCarat * data.poidsUnit * diamant.quantite;
-          const coutSertissage = prixSertissage[diamant.sertissage] * diamant.quantite;
+          const coutSertissage = (parametres.prixSertissage[diamant.sertissage] || 0) * diamant.quantite;
           totalSertissage += coutSertissage;
           return total + prix;
         }
@@ -278,22 +318,36 @@ const PageCreerDevis = ({ darkMode }) => {
     };
 
     const prixDiamants = calculerPrixDiamants();
-    const prixAutresPierres = autresPierres.reduce((total, pierre) => total + parseFloat(pierre.prix || 0), 0);
-    const prixMetal = (parseFloat(devis.poidsEstime) || 0) * 50; // 50€ par gramme, ajustez si nécessaire
+    const prixAutresPierres = (autresPierres || []).reduce((total, pierre) => total + parseFloat(pierre.prix || 0), 0);
+    const prixMetal = (parseFloat(devis.poidsEstime) || 0) * (parametres.prixMetaux && devis.metal ? parametres.prixMetaux[devis.metal] || 0 : 0) / 1000;
 
-    const prixCAO = (devis.temps.cao.hours + devis.temps.administratif.hours) * tauxHoraire;
-    const prixBijouterie = (devis.temps.repare.hours + devis.temps.polissage.hours) * tauxHoraire;
-    setPrixCAO(prixCAO);
+    const prixCAO = ((devis.temps?.cao?.hours || 0) * parametres.tauxHoraireCAO) +
+      ((devis.temps?.cao?.minutes || 0) / 60 * parametres.tauxHoraireCAO);
+    const prixAdministratif = ((devis.temps?.administratif?.hours || 0) * parametres.tauxHoraireAdministratif) +
+      ((devis.temps?.administratif?.minutes || 0) / 60 * parametres.tauxHoraireAdministratif);
+    const prixBijouterie = ((devis.temps?.repare?.hours || 0) + (devis.temps?.polissage?.hours || 0)) * parametres.tauxHoraireBijouterie +
+      ((devis.temps?.repare?.minutes || 0) + (devis.temps?.polissage?.minutes || 0)) / 60 * parametres.tauxHoraireBijouterie;
+
+    setPrixCAO(prixCAO + prixAdministratif);
     setPrixBijouterie(prixBijouterie);
 
-    const sousTotal = prixDiamants + prixAutresPierres + prixMetal + coutsSertissage + prixCAO + prixBijouterie;
-    const remise = sousTotal * (parseFloat(devis.remiseGenerale) / 100);
+    const nouveauPrixGravure = devis.gravure && parametres.prixGravure ? parametres.prixGravure[devis.styleGravure] || 0 : 0;
+    setPrixGravure(nouveauPrixGravure);
+
+    const prixRhodiage = devis.rhodiage ? parametres.prixRhodiage || 0 : 0;
+
+    // Calculer le prix de la livraison en fonction de la méthode sélectionnée
+    const prixLivraison = devis.methodeLivraison ? parametres.prixLivraison[devis.methodeLivraison] || 0 : 0;
+
+    const sousTotal = prixDiamants + prixAutresPierres + prixMetal + coutsSertissage + prixCAO + prixAdministratif + prixBijouterie + nouveauPrixGravure + prixRhodiage + prixLivraison;
+    const remiseGenerale = parseFloat(devis.remiseGenerale) || 0;
+    const remise = sousTotal * (remiseGenerale / 100);
     const ht = sousTotal - remise;
     const tva = ht * 0.2;
     setTotalHT(ht);
     setTotalTVA(tva);
     setTotalTTC(ht + tva);
-  }, [devis, autresPierres, coutsSertissage, diamantData, prixSertissage, tauxHoraire]);
+  }, [devis, autresPierres, parametres, diamantData, coutsSertissage]);
 
   const inputClass = `w-full p-1 text-xs border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:border-teal-500 focus:ring focus:ring-teal-200`;
   const labelClass = 'block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300';
@@ -313,7 +367,7 @@ const PageCreerDevis = ({ darkMode }) => {
   const styleGravures = ['Manuscrite', 'Bâton'];
 
   return (
-    <div className={`p-4 ${darkMode ? 'dark:bg-gray-800 dark:text-white' : 'bg-gray-50'}`}>
+    <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <h2 className="text-xl font-bold mb-4 text-teal-700 dark:text-teal-300">Nouveau devis - {devis.numero}</h2>
       <form className="space-y-4">
         <div className="grid grid-cols-3 gap-4">
@@ -377,11 +431,23 @@ const PageCreerDevis = ({ darkMode }) => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={labelClass}>Gravure</label>
-                <input type="text" name="gravure" value={devis.gravure} onChange={handleChange} className={inputClass} placeholder="Texte à graver" />
+                <input 
+                  type="text" 
+                  name="gravure" 
+                  value={devis.gravure} 
+                  onChange={handleChange} 
+                  className={inputClass} 
+                  placeholder="Texte à graver" 
+                />
               </div>
               <div>
                 <label className={labelClass}>Style de gravure</label>
-                <select name="styleGravure" value={devis.styleGravure} onChange={handleChange} className={inputClass}>
+                <select 
+                  name="styleGravure" 
+                  value={devis.styleGravure} 
+                  onChange={handleChange} 
+                  className={inputClass}
+                >
                   <option value="">Sélectionner</option>
                   {styleGravures.map(style => (
                     <option key={style} value={style}>{style}</option>
@@ -392,7 +458,7 @@ const PageCreerDevis = ({ darkMode }) => {
             <div className="flex space-x-4">
               <label className="flex items-center">
                 <input type="checkbox" name="poincon" checked={devis.poincon} onChange={handleChange} className="mr-1" />
-                <span className="text-xs">Poinçon</span>
+                <span className="text-xs">Poinçon d'état</span>
               </label>
               <label className="flex items-center">
                 <input type="checkbox" name="dessertissage" checked={devis.dessertissage} onChange={handleChange} className="mr-1" />
@@ -412,10 +478,15 @@ const PageCreerDevis = ({ darkMode }) => {
                 <TimeInput
                   key={type}
                   label={`Temps ${type}`}
-                  hours={devis.temps[type.toLowerCase()].hours}
-                  minutes={devis.temps[type.toLowerCase()].minutes}
+                  hours={devis.temps?.[type.toLowerCase()]?.hours || 0}
+                  minutes={devis.temps?.[type.toLowerCase()]?.minutes || 0}
                   onChange={(h, m) => handleTimeChange(type.toLowerCase(), h, m)}
-                  price={(devis.temps[type.toLowerCase()].hours + devis.temps[type.toLowerCase()].minutes / 60) * tauxHoraire}
+                  price={
+                    ((devis.temps?.[type.toLowerCase()]?.hours || 0) + ((devis.temps?.[type.toLowerCase()]?.minutes || 0) / 60)) * 
+                    (type === 'Administratif' ? parametres.tauxHoraireAdministratif :
+                     type === 'CAO' ? parametres.tauxHoraireCAO :
+                     parametres.tauxHoraireBijouterie)
+                  }
                   darkMode={darkMode}
                 />
               ))}
@@ -433,83 +504,149 @@ const PageCreerDevis = ({ darkMode }) => {
 
         {/* Section Diamants et Autres Pierres */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-semibold mb-2">Diamants</h3>
+          <div className="border border-teal-500 rounded-lg p-4 bg-teal-50 dark:bg-teal-900 dark:border-teal-700">
+            <h3 className="text-sm font-semibold mb-4 text-teal-700 dark:text-teal-300">Diamants</h3>
             <div className="space-y-2">
-              {devis.diamants.map((diamant, index) => (
-                <div key={index} className="flex items-stretch space-x-1">
-                  <select value={diamant.taille} onChange={(e) => handleDiamantChange(index, 'taille', e.target.value)} className={`${inputClass} w-20`}>
+              <div className="grid grid-cols-[2fr_1fr_2fr_2fr_40px] gap-2 text-xs font-medium text-teal-600 dark:text-teal-400">
+                <div>Taille</div>
+                <div>Qté</div>
+                <div>Fourni par</div>
+                <div>Sertissage</div>
+                <div></div>
+              </div>
+              {(devis.diamants || []).map((diamant, index) => (
+                <div key={index} className="grid grid-cols-[2fr_1fr_2fr_2fr_40px] gap-2">
+                  <select 
+                    value={diamant.taille} 
+                    onChange={(e) => handleDiamantChange(index, 'taille', e.target.value)} 
+                    className={`${inputClass} bg-white dark:bg-gray-700`}
+                  >
                     <option value="">Taille</option>
                     {taillesDiamant.map(taille => (
                       <option key={taille} value={taille}>{taille} mm</option>
                     ))}
                   </select>
-                  <input type="number" value={diamant.quantite} onChange={(e) => handleDiamantChange(index, 'quantite', e.target.value)} placeholder="Qté" className={`${inputClass} w-16`} min="1" />
-                  <select value={diamant.fournisseur} onChange={(e) => handleDiamantChange(index, 'fournisseur', e.target.value)} className={`${inputClass} w-24`}>
+                  <input 
+                    type="number" 
+                    value={diamant.quantite} 
+                    onChange={(e) => handleDiamantChange(index, 'quantite', e.target.value)} 
+                    placeholder="Qté" 
+                    className={`${inputClass} bg-white dark:bg-gray-700`} 
+                    min="0" 
+                  />
+                  <select 
+                    value={diamant.fournisseur} 
+                    onChange={(e) => handleDiamantChange(index, 'fournisseur', e.target.value)} 
+                    className={`${inputClass} bg-white dark:bg-gray-700`}
+                  >
                     <option value="TGN 409">TGN 409</option>
                     <option value="Client">Client</option>
                   </select>
-                  <select value={diamant.sertissage} onChange={(e) => handleDiamantChange(index, 'sertissage', e.target.value)} className={`${inputClass} w-28`}>
-                    <option value="">Sertissage</option>
+                  <select 
+                    value={diamant.sertissage || 'Serti grain'} 
+                    onChange={(e) => handleDiamantChange(index, 'sertissage', e.target.value)} 
+                    className={`${inputClass} bg-white dark:bg-gray-700`}
+                  >
                     {typesSertissage.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
                   <button 
                     onClick={() => handleDiamantRemove(index)} 
-                    className={deleteButtonClass}
+                    className={`${deleteButtonClass} w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 flex items-center justify-center`}
                     type="button"
                     aria-label="Supprimer le diamant"
-                    style={{ minWidth: '32px', minHeight: '32px' }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                 </div>
               ))}
-              <button onClick={handleDiamantAdd} className={`${buttonClass} w-full`} type="button">+ Diamant</button>
+              <button onClick={handleDiamantAdd} className={`${buttonClass} w-full bg-teal-600 hover:bg-teal-700 text-white`} type="button">+ Diamant</button>
             </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold mb-2">Autres Pierres</h3>
+          <div className="border border-teal-500 rounded-lg p-4 bg-teal-50 dark:bg-teal-900 dark:border-teal-700">
+            <h3 className="text-sm font-semibold mb-4 text-teal-700 dark:text-teal-300">Autres Pierres</h3>
             <div className="space-y-2">
-              {autresPierres.map((pierre, index) => (
-                <div key={index} className="flex items-stretch space-x-1">
-                  <select value={pierre.forme} onChange={(e) => handleAutrePierreChange(index, 'forme', e.target.value)} className={`${inputClass} w-20`}>
+              <div className="grid grid-cols-[1.5fr_1fr_1.5fr_1fr_1fr_1.5fr_1fr_40px] gap-2 text-xs font-medium text-teal-600 dark:text-teal-400">
+                <div>Forme</div>
+                <div>Dimension</div>
+                <div>Type</div>
+                <div>Prix</div>
+                <div>Carat</div>
+                <div>Fourni par</div>
+                <div>Qté</div>
+                <div></div>
+              </div>
+              {(autresPierres || []).map((pierre, index) => (
+                <div key={index} className="grid grid-cols-[1.5fr_1fr_1.5fr_1fr_1fr_1.5fr_1fr_40px] gap-2">
+                  <select 
+                    value={pierre.forme} 
+                    onChange={(e) => handleAutrePierreChange(index, 'forme', e.target.value)} 
+                    className={inputClass}
+                  >
                     <option value="">Forme</option>
                     {['Ronde', 'Poire', 'Princesse', 'Rpc', 'Coeur'].map(forme => (
                       <option key={forme} value={forme}>{forme}</option>
                     ))}
                   </select>
-                  <input type="text" value={pierre.dimension} onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)} placeholder="Dim" className={`${inputClass} w-16`} />
-                  <select value={pierre.type} onChange={(e) => handleAutrePierreChange(index, 'type', e.target.value)} className={`${inputClass} w-24`}>
+                  <input 
+                    type="text" 
+                    value={pierre.dimension} 
+                    onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)} 
+                    placeholder="Dim" 
+                    className={inputClass}
+                  />
+                  <select 
+                    value={pierre.type} 
+                    onChange={(e) => handleAutrePierreChange(index, 'type', e.target.value)} 
+                    className={inputClass}
+                  >
                     <option value="">Type</option>
                     {['Diamant', 'Saphir', 'Rubis', 'Émeraude'].map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
-                  <input type="number" value={pierre.prix} onChange={(e) => handleAutrePierreChange(index, 'prix', e.target.value)} placeholder="Prix" className={`${inputClass} w-16`} />
-                  <input type="number" value={pierre.caratage} onChange={(e) => handleAutrePierreChange(index, 'caratage', e.target.value)} placeholder="Carat" className={`${inputClass} w-16`} />
-                  <select value={pierre.fournisseur} onChange={(e) => handleAutrePierreChange(index, 'fournisseur', e.target.value)} className={`${inputClass} w-24`}>
+                  <input 
+                    type="number" 
+                    value={pierre.prix} 
+                    onChange={(e) => handleAutrePierreChange(index, 'prix', e.target.value)} 
+                    placeholder="Prix" 
+                    className={inputClass}
+                  />
+                  <input 
+                    type="number" 
+                    value={pierre.caratage} 
+                    onChange={(e) => handleAutrePierreChange(index, 'caratage', e.target.value)} 
+                    placeholder="Carat" 
+                    className={inputClass}
+                  />
+                  <select 
+                    value={pierre.fournisseur} 
+                    onChange={(e) => handleAutrePierreChange(index, 'fournisseur', e.target.value)} 
+                    className={inputClass}
+                  >
                     <option value="TGN 409">TGN 409</option>
                     <option value="Client">Client</option>
                   </select>
-                  <input type="number" value={pierre.quantite} onChange={(e) => handleAutrePierreChange(index, 'quantite', e.target.value)} placeholder="Qté" className={`${inputClass} w-12`} min="1" />
+                  <input 
+                    type="number" 
+                    value={pierre.quantite} 
+                    onChange={(e) => handleAutrePierreChange(index, 'quantite', e.target.value)} 
+                    placeholder="Qté" 
+                    className={inputClass}
+                    min="1"
+                  />
                   <button 
                     onClick={() => supprimerAutrePierre(index)} 
-                    className={deleteButtonClass}
+                    className={`${deleteButtonClass} w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 flex items-center justify-center`}
                     type="button"
                     aria-label="Supprimer la pierre"
-                    style={{ minWidth: '32px', minHeight: '32px' }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                 </div>
               ))}
-              <button onClick={ajouterAutrePierre} className={`${buttonClass} w-full`} type="button">+ Autre Pierre</button>
+              <button onClick={ajouterAutrePierre} className={`${buttonClass} w-full bg-teal-600 hover:bg-teal-700 text-white`} type="button">+ Autre Pierre</button>
             </div>
           </div>
         </div>
@@ -546,38 +683,131 @@ const PageCreerDevis = ({ darkMode }) => {
         </div>
 
         {/* Détails du prix */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Remise générale (%)</label>
-            <input type="number" name="remiseGenerale" value={devis.remiseGenerale} onChange={handleChange} className={inputClass} min="0" max="100" />
-          </div>
-          <div>
-            <label className={labelClass}>Méthode de livraison</label>
-            <select name="methodeLivraison" value={devis.methodeLivraison} onChange={handleChange} className={inputClass}>
-              <option value="">Sélectionner</option>
-              {methodesLivraison.map(methode => (
-                <option key={methode} value={methode}>{methode}</option>
-              ))}
-            </select>
-          </div>
-          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded`}>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <div>Coût sertissage</div>
-              <div className="text-right">{(coutsSertissage || 0).toFixed(2)} €</div>
-              <div>Prix CAO</div>
-              <div className="text-right">{(prixCAO || 0).toFixed(2)} €</div>
-              <div>Prix bijouterie</div>
-              <div className="text-right">{(prixBijouterie || 0).toFixed(2)} €</div>
-              <div>Total HT</div>
-              <div className="text-right">{(totalHT || 0).toFixed(2)} €</div>
-              <div>Remise</div>
-              <div className="text-right">{((totalHT || 0) * (parseFloat(devis.remiseGenerale) || 0) / 100).toFixed(2)} €</div>
-              <div>Total HT final</div>
-              <div className="text-right">{(totalHT - ((totalHT || 0) * (parseFloat(devis.remiseGenerale) || 0) / 100)).toFixed(2)} €</div>
-              <div>TVA</div>
-              <div className="text-right">{(totalTVA || 0).toFixed(2)} €</div>
-              <div className="font-bold">Total TTC</div>
-              <div className="text-right font-bold">{(totalTTC || 0).toFixed(2)} €</div>
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mt-8">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Détail du prix</h3>
+          
+          <div className="grid grid-cols-3 gap-6">
+            {/* Colonne 1 et 2 : Coûts détaillés */}
+            <div className="col-span-2 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-teal-50 dark:bg-teal-900 p-3 rounded-lg">
+                  <h4 className="font-medium text-teal-700 dark:text-teal-300 mb-2">Coûts de production</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Sertissage</span>
+                      <span>{(coutsSertissage || 0).toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>CAO</span>
+                      <span>{(prixCAO || 0).toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Bijouterie</span>
+                      <span>{(prixBijouterie || 0).toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg">
+                  <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-2">Coûts d'impression</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Résine</span>
+                      <span>{(parseFloat(devis.tarifImpressionResine) || 0).toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cire</span>
+                      <span>{(parseFloat(devis.tarifImpressionCire) || 0).toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Fonte</span>
+                      <span>{(parseFloat(devis.tarifFonte) || 0).toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-purple-50 dark:bg-purple-900 p-3 rounded-lg">
+                  <h4 className="font-medium text-purple-700 dark:text-purple-300 mb-2">Finitions</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Gravure</span>
+                      <span>{(prixGravure || 0).toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Rhodiage</span>
+                      <span>{(devis.rhodiage ? parametres.prixRhodiage : 0).toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-lg">
+                  <h4 className="font-medium text-orange-700 dark:text-orange-300 mb-3">Autres</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="remiseGenerale" className="text-sm font-medium">Remise générale</label>
+                      <div className="flex items-center w-24">
+                        <input
+                          type="number"
+                          id="remiseGenerale"
+                          name="remiseGenerale"
+                          value={devis.remiseGenerale || ''}
+                          onChange={handleChange}
+                          className={`${inputClass} w-16 text-right pr-1`}
+                          min="0"
+                          max="100"
+                          step="0.1"
+                        />
+                        <span className="ml-1 text-sm">%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="methodeLivraison" className="text-sm font-medium">Méthode de livraison</label>
+                      <select 
+                        id="methodeLivraison"
+                        name="methodeLivraison" 
+                        value={devis.methodeLivraison} 
+                        onChange={handleChange} 
+                        className={`${inputClass} w-40`}
+                      >
+                        <option value="">Sélectionner</option>
+                        {Object.keys(parametres.prixLivraison).map(methode => (
+                          <option key={methode} value={methode}>{methode}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Coût de livraison</span>
+                      <span>{(devis.methodeLivraison ? parametres.prixLivraison[devis.methodeLivraison] || 0 : 0).toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne 3 : Récapitulatif */}
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+              <h4 className="font-semibold mb-3 text-gray-800 dark:text-gray-200">Récapitulatif</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Total HT</span>
+                  <span className="font-medium">{(totalHT || 0).toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between text-red-600 dark:text-red-400">
+                  <span>Remise</span>
+                  <span>-{((totalHT || 0) * (parseFloat(devis.remiseGenerale) || 0) / 100).toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Total HT final</span>
+                  <span>{(totalHT - ((totalHT || 0) * (parseFloat(devis.remiseGenerale) || 0) / 100)).toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>TVA (20%)</span>
+                  <span>{(totalTVA || 0).toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-gray-300 dark:border-gray-500">
+                  <span>Total TTC</span>
+                  <span>{(totalTTC || 0).toFixed(2)} €</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

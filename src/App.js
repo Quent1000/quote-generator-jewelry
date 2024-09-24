@@ -1,11 +1,12 @@
 import React from 'react';
+import { AppProvider } from './context/AppContext';
 import DevisApp from './components/DevisApp';
 
 function App() {
   return (
-    <div className="App">
+    <AppProvider>
       <DevisApp />
-    </div>
+    </AppProvider>
   );
 }
 
