@@ -3,52 +3,63 @@ import { PhoneIcon, GlobeAltIcon, EnvelopeIcon } from '@heroicons/react/24/outli
 import { useAppContext } from '../../context/AppContext';
 
 const ClientCard = ({ client, onClick }) => {
-  const { darkMode } = useAppContext();
   const [isHovered, setIsHovered] = useState(false);
+  const { darkMode } = useAppContext();
+
+  // Fonction pour obtenir les initiales du client de manière sécurisée
+  const getInitials = () => {
+    const prenom = client.informationsPersonnelles?.prenom || '';
+    const nom = client.informationsPersonnelles?.nom || '';
+    return (prenom.charAt(0) + nom.charAt(0)).toUpperCase();
+  };
+
+  // Vérification de la présence des données nécessaires
+  if (!client || !client.informationsPersonnelles) {
+    return null; // ou un composant de fallback
+  }
 
   return (
-    <div 
-      className={`relative overflow-hidden rounded-lg transition-all duration-300 ease-in-out transform ${
+    <div
+      className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 ${
         darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-      } ${
-        isHovered ? 'shadow-lg scale-105' : 'shadow-md'
-      } cursor-pointer`}
+      }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}  // Ajout de l'événement onClick ici
+      onClick={onClick}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-blue-500 opacity-0 transition-opacity duration-300 ease-in-out z-0" 
-           style={{ opacity: isHovered ? 0.1 : 0 }}
-      ></div>
-      
-      <div className="relative z-10 p-5">
-        <div className="flex items-center mb-4">
-          {client.logo ? (
-            <img src={client.logo} alt={`Logo ${client.societe}`} className="w-16 h-16 rounded-full mr-4 object-cover border-2 border-teal-500" />
-          ) : (
-            <div className={`w-16 h-16 rounded-full mr-4 flex items-center justify-center text-2xl font-bold ${darkMode ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-800'}`}>
-              {client.societe.charAt(0)}
-            </div>
-          )}
+      <div className="px-6 py-4">
+        <div className="flex items-center mb-2">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mr-4 ${
+            darkMode ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-800'
+          }`}>
+            {getInitials()}
+          </div>
           <div>
-            <h3 className="font-semibold text-xl">{client.prenom} {client.nom}</h3>
-            <p className={`text-sm ${darkMode ? 'text-teal-300' : 'text-teal-600'}`}>{client.societe}</p>
+            <h3 className="text-lg font-semibold">
+              {client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{client.entreprise?.nom || 'N/A'}</p>
           </div>
         </div>
-        
-        <div className="space-y-2 text-sm">
-          <p className="flex items-center transition-transform duration-200 ease-in-out transform hover:translate-x-2">
-            <PhoneIcon className="h-4 w-4 mr-2 text-teal-500" />
-            {client.telephone}
-          </p>
-          <p className="flex items-center transition-transform duration-200 ease-in-out transform hover:translate-x-2">
-            <EnvelopeIcon className="h-4 w-4 mr-2 text-teal-500" />
-            {client.email}
-          </p>
-          <p className="flex items-center transition-transform duration-200 ease-in-out transform hover:translate-x-2">
-            <GlobeAltIcon className="h-4 w-4 mr-2 text-teal-500" />
-            {client.siteWeb || 'Non renseigné'}
-          </p>
+        <div className="mt-4 space-y-2">
+          {client.informationsPersonnelles.email && (
+            <p className="flex items-center text-sm">
+              <EnvelopeIcon className="h-5 w-5 mr-2 text-teal-500" />
+              {client.informationsPersonnelles.email}
+            </p>
+          )}
+          {client.informationsPersonnelles.telephone && (
+            <p className="flex items-center text-sm">
+              <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
+              {client.informationsPersonnelles.telephone}
+            </p>
+          )}
+          {client.entreprise?.siteWeb && (
+            <p className="flex items-center text-sm">
+              <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
+              {client.entreprise.siteWeb}
+            </p>
+          )}
         </div>
       </div>
       
@@ -57,14 +68,14 @@ const ClientCard = ({ client, onClick }) => {
       } ${
         isHovered ? 'bg-opacity-90' : ''
       }`}>
-        Client depuis : {new Date(client.dateCreation).toLocaleDateString()}
+        Client depuis : {new Date(client.relationClient?.dateCreation || Date.now()).toLocaleDateString()}
       </div>
       
       {isHovered && (
         <div className={`absolute bottom-0 left-0 right-0 p-3 text-xs bg-teal-500 text-white transform transition-transform duration-300 ease-in-out ${
           isHovered ? 'translate-y-0' : 'translate-y-full'
         }`}>
-          {client.commentaireInterne || 'Aucun commentaire'}
+          {client.relationClient?.commentaireInterne || 'Aucun commentaire'}
         </div>
       )}
     </div>

@@ -1,81 +1,92 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { HomeIcon, UserIcon, DocumentTextIcon, CogIcon, MoonIcon, SunIcon } from '@heroicons/react/24/outline';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import logo from '../../assets/devisapp-logo.png'; // Assurez-vous que le chemin est correct
+import { useAuth } from '../../context/AuthContext';
+import {
+  HomeIcon,
+  UserIcon,
+  DocumentTextIcon,
+  CogIcon,
+  MoonIcon,
+  SunIcon,
+  ArrowLeftOnRectangleIcon,
+  UserCircleIcon,
+} from '@heroicons/react/24/outline';
+import logo from '../../assets/devisapp-logo.png';
+
+const sidebarItems = [
+  { name: 'Tableau de bord', path: '/', icon: HomeIcon },
+  { name: 'Clients', path: '/clients', icon: UserIcon },
+  { name: 'Créer un devis', path: '/creer-devis', icon: DocumentTextIcon },
+  { name: 'Paramétrage devis', path: '/parametrage-devis', icon: CogIcon },
+  { name: 'Profil', path: '/profil', icon: UserCircleIcon },
+];
 
 const Sidebar = () => {
-  const location = useLocation();
   const { darkMode, toggleDarkMode } = useAppContext();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const navItems = [
-    { name: 'Tableau de bord', icon: HomeIcon, path: '/' },
-    { name: 'Créer un devis', icon: DocumentTextIcon, path: '/creer-devis' },
-    { name: 'Clients', icon: UserIcon, path: '/clients' },
-    { name: 'Paramétrage du devis', icon: CogIcon, path: '/parametrage-devis' },
-  ];
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion", error);
+    }
+  };
+
+  const navItemClass = `flex items-center px-4 py-3 text-gray-600 hover:bg-teal-50 hover:text-teal-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200`;
+  const activeNavItemClass = `${navItemClass} bg-teal-50 dark:bg-gray-700 text-teal-600 dark:text-teal-400 font-medium`;
 
   return (
-    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-600'}`}>
-      <div className="p-4 flex items-center justify-center">
-        <img src={logo} alt="DEVISAPP Logo" className="h-24 w-auto" /> {/* Augmenté la hauteur à 20 (ou ajustez selon vos besoins) */}
+    <div className={`w-64 h-screen flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-white'} border-r border-gray-200 dark:border-gray-700`}>
+      <div className="flex items-center justify-center h-24 border-b border-gray-200 dark:border-gray-700">
+        <img src={logo} alt="DevisApp Logo" className="h-auto w-auto max-h-20 max-w-[80%]" />
       </div>
-      <nav className="flex-1 mt-5 px-2">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
+      <nav className="flex-1 overflow-y-auto py-4">
+        <ul className="space-y-1 px-3">
+          {sidebarItems.map((item) => (
             <li key={item.name}>
-              <Link
+              <NavLink
                 to={item.path}
-                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                  location.pathname === item.path
-                    ? 'bg-teal-600 text-white'
-                    : darkMode
-                    ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    : 'hover:bg-teal-700 hover:text-white'
-                }`}
+                className={({ isActive }) => isActive ? activeNavItemClass : navItemClass}
               >
-                <item.icon className="mr-3 h-6 w-6" aria-hidden="true" />
-                {item.name}
-              </Link>
+                <item.icon className="w-6 h-6 mr-3" />
+                <span className="text-sm font-medium">{item.name}</span>
+              </NavLink>
             </li>
           ))}
         </ul>
       </nav>
-      <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <img src="https://via.placeholder.com/40" alt="Profile" className="w-10 h-10 rounded-full mr-3" />
-            <span className="text-sm font-medium">John Doe</span>
+            <img
+              className="h-8 w-8 rounded-full mr-2"
+              src={user.photoURL || "https://via.placeholder.com/32"}
+              alt="User avatar"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user.email}
+            </span>
           </div>
           <button
             onClick={toggleDarkMode}
-            className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-800'}`}
-            aria-label="Toggle dark mode"
+            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
-            {darkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
+            {darkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
           </button>
         </div>
-        <div className="flex items-center justify-between mt-4">
-          <button 
-            className={`p-2 rounded-md transition-colors duration-200 ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'}`} 
-            aria-label="Paramètres"
-          >
-            <CogIcon className="h-5 w-5" />
-          </button>
-          <button 
-            className={`flex items-center p-2 rounded-md transition-colors duration-200 ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'}`} 
-            aria-label="Déconnexion"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm">Déconnexion</span>
-          </button>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+        >
+          <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-2" />
+          <span className="text-sm">Déconnexion</span>
+        </button>
       </div>
     </div>
   );

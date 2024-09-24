@@ -1,72 +1,62 @@
-import { useState, useEffect, useMemo } from 'react';
-import clientsData from '../data/clientsData';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 
-const useClients = (clientsPerPage = 12) => {
+const useClients = () => {
   const [clients, setClients] = useState([]);
+  const [allClients, setAllClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const clientsPerPage = 12;
 
   useEffect(() => {
-    setClients(clientsData);
+    const fetchClients = async () => {
+      const clientsCollection = collection(db, 'clients');
+      const clientsQuery = query(clientsCollection, orderBy('informationsPersonnelles.nom'));
+      const clientsSnapshot = await getDocs(clientsQuery);
+      const clientsList = clientsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAllClients(clientsList);
+    };
+
+    fetchClients();
   }, []);
 
-  const filteredClients = useMemo(() => {
-    return clients.filter(client =>
-      client &&
-      client.informationsPersonnelles &&
-      client.informationsPersonnelles.prenom &&
-      client.informationsPersonnelles.nom &&
-      client.entreprise &&
-      client.entreprise.nom &&
-      (`${client.informationsPersonnelles.prenom} ${client.informationsPersonnelles.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.entreprise.nom.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [clients, searchTerm]);
+  useEffect(() => {
+    let filteredClients = allClients;
 
-  const sortedClients = useMemo(() => {
-    let sortableClients = [...filteredClients];
-    if (sortConfig.key !== null) {
-      sortableClients.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
+    if (searchTerm) {
+      filteredClients = allClients.filter(client =>
+        client.informationsPersonnelles.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.informationsPersonnelles.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.entreprise.nom.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-    return sortableClients;
-  }, [filteredClients, sortConfig]);
 
-  const currentClients = useMemo(() => {
-    const indexOfLastClient = currentPage * clientsPerPage;
-    const indexOfFirstClient = indexOfLastClient - clientsPerPage;
-    return sortedClients.slice(indexOfFirstClient, indexOfLastClient);
-  }, [sortedClients, currentPage, clientsPerPage]);
+    setClients(filteredClients);
+  }, [allClients, searchTerm]);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const requestSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
+  const indexOfLastClient = currentPage * clientsPerPage;
+  const indexOfFirstClient = indexOfLastClient - clientsPerPage;
+  const currentClients = clients.slice(indexOfFirstClient, indexOfLastClient);
+
+  const addClient = useCallback((newClient) => {
+    setAllClients(prevClients => [...prevClients, newClient]);
+  }, []);
 
   return {
     clients: currentClients,
-    allClients: clients, // Ajout de cette ligne
-    setClients,
+    allClients,
     searchTerm,
     setSearchTerm,
     currentPage,
     paginate,
-    totalPages: Math.ceil(sortedClients.length / clientsPerPage),
-    requestSort,
-    sortConfig
+    totalPages: Math.ceil(clients.length / clientsPerPage),
+    addClient
   };
 };
 

@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Tab } from '@headlessui/react';
-import { CogIcon, CurrencyEuroIcon, ScaleIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import { db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const PageParametrageDevis = () => {
   const { darkMode } = useAppContext();
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [parametres, setParametres] = useState({
     tauxHoraireCAO: 50,
     tauxHoraireBijouterie: 50,
@@ -30,225 +33,224 @@ const PageParametrageDevis = () => {
     },
     prixRhodiage: 30,
     prixLivraison: {
-      "Sur site": 0,
-      "VD la poste": 10,
-      "DHL": 20,
-      "Fedex": 25
+      "Standard": 10,
+      "Express": 20,
+      "International": 30
     }
   });
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  useEffect(() => {
-    const savedParams = localStorage.getItem('parametresDevis');
-    if (savedParams) {
-      try {
-        const parsedParams = JSON.parse(savedParams);
-        setParametres(prev => ({...prev, ...parsedParams}));
-      } catch (error) {
-        console.error("Erreur lors du parsing des paramètres:", error);
-      }
+  const fetchParametres = useCallback(async () => {
+    const docRef = doc(db, 'parametresDevis', 'default');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      setParametres(docSnap.data());
+    } else {
+      // Utilisez une fonction pour obtenir les valeurs initiales
+      const getInitialParametres = () => ({
+        tauxHoraireCAO: 50,
+        tauxHoraireBijouterie: 50,
+        tauxHoraireAdministratif: 50,
+        prixSertissage: {
+          "Serti grain": 3,
+          "Serti rail": 4,
+          "Serti copeaux": 5,
+          "Serti clos": 6,
+          "Serti descendu": 7,
+          "Serti masse": 8
+        },
+        prixGravure: {
+          "Manuscrite": 20,
+          "Bâton": 15
+        },
+        prixMetaux: {
+          "JAUNE": 50000,
+          "GRIS": 55000,
+          "GPD": 60000,
+          "ROUGE 5N": 58000,
+          "ROSE 4N": 56000
+        },
+        prixRhodiage: 30,
+        prixLivraison: {
+          "Standard": 10,
+          "Express": 20,
+          "International": 30
+        }
+      });
+      const initialParametres = getInitialParametres();
+      await setDoc(docRef, initialParametres);
+      setParametres(initialParametres);
     }
   }, []);
 
-  const handleChange = (e, category = null, subCategory = null) => {
+  useEffect(() => {
+    fetchParametres();
+  }, [fetchParametres]);
+
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setParametres(prev => {
-      if (category) {
-        if (subCategory) {
-          return {
-            ...prev,
-            [category]: {
-              ...prev[category],
-              [subCategory]: {
-                ...prev[category][subCategory],
-                [name]: parseFloat(value) || 0
-              }
-            }
-          };
-        }
-        return {
-          ...prev,
-          [category]: {
-            ...prev[category],
-            [name]: parseFloat(value) || 0
-          }
-        };
+    setParametres(prev => ({ ...prev, [name]: parseFloat(value) }));
+  }, []);
+
+  const handleNestedInputChange = useCallback((category, key, value) => {
+    setParametres(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [key]: parseFloat(value)
       }
-      return {
-        ...prev,
-        [name]: parseFloat(value) || 0
-      };
-    });
-  };
+    }));
+  }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    localStorage.setItem('parametresDevis', JSON.stringify(parametres));
-    alert('Paramètres sauvegardés avec succès !');
+    const docRef = doc(db, 'parametresDevis', 'default');
+    await setDoc(docRef, parametres);
+    alert('Paramètres sauvegardés avec succès dans Firestore !');
   };
 
-  const inputClass = `w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} focus:border-teal-500 focus:ring focus:ring-teal-200`;
-  const labelClass = 'block mb-1 font-medium text-sm text-gray-700 dark:text-gray-300';
+  const tabClass = `px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+    darkMode
+      ? 'text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white'
+      : 'text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-teal-500'
+  }`;
 
-  const TabContent = ({ children, icon: Icon }) => (
-    <div className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium leading-5 text-teal-700 dark:text-teal-300">
-      <Icon className="w-5 h-5" />
-      <span>{children}</span>
-    </div>
-  );
+  const selectedTabClass = `${tabClass} ${
+    darkMode ? 'bg-gray-700 text-white' : 'bg-teal-500 text-white'
+  }`;
+
+  const inputClass = `w-full p-2 rounded-md ${
+    darkMode
+      ? 'bg-gray-700 text-white border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+      : 'bg-white text-gray-900 border-gray-300 focus:border-teal-500 focus:ring-teal-500'
+  } border focus:outline-none focus:ring-2`;
 
   return (
-    <div className={`p-6 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      <h2 className="text-2xl font-bold mb-6 text-teal-600 dark:text-teal-400">Paramétrage du devis</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+      <h1 className="text-3xl font-bold mb-6">Paramétrage des devis</h1>
+      <form onSubmit={handleSubmit}>
         <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-          <Tab.List className="flex space-x-1 rounded-xl bg-teal-900/20 p-1">
-            <Tab 
-              className={({ selected }) =>
-                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-teal-700 dark:text-teal-300
-                 ${selected ? 'bg-white dark:bg-gray-700 shadow' : 'hover:bg-white/[0.12] hover:text-teal-600'}`
-              }
-            >
-              <TabContent icon={CogIcon}>Taux horaires</TabContent>
+          <Tab.List className="flex space-x-2 rounded-xl bg-teal-900/20 p-1 mb-4">
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <CogIcon className="w-5 h-5 mr-2 inline-block" />
+              Taux horaires
             </Tab>
-            <Tab 
-              className={({ selected }) =>
-                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-teal-700 dark:text-teal-300
-                 ${selected ? 'bg-white dark:bg-gray-700 shadow' : 'hover:bg-white/[0.12] hover:text-teal-600'}`
-              }
-            >
-              <TabContent icon={CurrencyEuroIcon}>Prix des services</TabContent>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <ScaleIcon className="w-5 h-5 mr-2 inline-block" />
+              Prix sertissage
             </Tab>
-            <Tab 
-              className={({ selected }) =>
-                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-teal-700 dark:text-teal-300
-                 ${selected ? 'bg-white dark:bg-gray-700 shadow' : 'hover:bg-white/[0.12] hover:text-teal-600'}`
-              }
-            >
-              <TabContent icon={ScaleIcon}>Prix des métaux</TabContent>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <CurrencyDollarIcon className="w-5 h-5 mr-2 inline-block" />
+              Prix gravure
             </Tab>
-            <Tab 
-              className={({ selected }) =>
-                `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-teal-700 dark:text-teal-300
-                 ${selected ? 'bg-white dark:bg-gray-700 shadow' : 'hover:bg-white/[0.12] hover:text-teal-600'}`
-              }
-            >
-              <TabContent icon={TruckIcon}>Livraison</TabContent>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <CurrencyDollarIcon className="w-5 h-5 mr-2 inline-block" />
+              Prix métaux
+            </Tab>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <TruckIcon className="w-5 h-5 mr-2 inline-block" />
+              Autres
             </Tab>
           </Tab.List>
-          <Tab.Panels className="mt-4">
+          <Tab.Panels>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {['CAO', 'Bijouterie', 'Administratif'].map((type) => (
-                  <div key={type}>
-                    <label htmlFor={`tauxHoraire${type}`} className={labelClass}>Taux horaire {type} (€/h)</label>
-                    <input
-                      type="number"
-                      id={`tauxHoraire${type}`}
-                      name={`tauxHoraire${type}`}
-                      value={parametres[`tauxHoraire${type}`] || ''}
-                      onChange={handleChange}
-                      className={inputClass}
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                ))}
-              </div>
-            </Tab.Panel>
-            <Tab.Panel>
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Prix de sertissage (€ par pierre)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {Object.entries(parametres.prixSertissage).map(([type, prix]) => (
-                      <div key={type}>
-                        <label htmlFor={type} className={labelClass}>{type}</label>
-                        <input
-                          type="number"
-                          id={type}
-                          name={type}
-                          value={prix || ''}
-                          onChange={(e) => handleChange(e, 'prixSertissage')}
-                          className={inputClass}
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Prix de gravure (€)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(parametres.prixGravure).map(([style, prix]) => (
-                      <div key={style}>
-                        <label htmlFor={style} className={labelClass}>{style}</label>
-                        <input
-                          type="number"
-                          id={style}
-                          name={style}
-                          value={prix || ''}
-                          onChange={(e) => handleChange(e, 'prixGravure')}
-                          className={inputClass}
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="prixRhodiage" className={labelClass}>Prix du rhodiage (€)</label>
+                  <label className="block mb-2">Taux horaire CAO</label>
                   <input
                     type="number"
-                    id="prixRhodiage"
-                    name="prixRhodiage"
-                    value={parametres.prixRhodiage || ''}
-                    onChange={handleChange}
+                    name="tauxHoraireCAO"
+                    value={parametres.tauxHoraireCAO}
+                    onChange={handleInputChange}
                     className={inputClass}
-                    min="0"
-                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Taux horaire Bijouterie</label>
+                  <input
+                    type="number"
+                    name="tauxHoraireBijouterie"
+                    value={parametres.tauxHoraireBijouterie}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Taux horaire Administratif</label>
+                  <input
+                    type="number"
+                    name="tauxHoraireAdministratif"
+                    value={parametres.tauxHoraireAdministratif}
+                    onChange={handleInputChange}
+                    className={inputClass}
                   />
                 </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <h3 className="text-lg font-semibold mb-3">Prix des métaux (€/kg)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixMetaux).map(([metal, prix]) => (
-                  <div key={metal}>
-                    <label htmlFor={metal} className={labelClass}>{metal}</label>
+                {Object.entries(parametres.prixSertissage).map(([type, prix]) => (
+                  <div key={type}>
+                    <label className="block mb-2">{type}</label>
                     <input
                       type="number"
-                      id={metal}
-                      name={metal}
-                      value={prix || ''}
-                      onChange={(e) => handleChange(e, 'prixMetaux')}
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixSertissage', type, e.target.value)}
                       className={inputClass}
-                      min="0"
-                      step="0.01"
                     />
                   </div>
                 ))}
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <h3 className="text-lg font-semibold mb-3">Prix de livraison (€)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(parametres.prixLivraison).map(([methode, prix]) => (
-                  <div key={methode}>
-                    <label htmlFor={`prixLivraison${methode}`} className={labelClass}>{methode}</label>
+                {Object.entries(parametres.prixGravure).map(([type, prix]) => (
+                  <div key={type}>
+                    <label className="block mb-2">{type}</label>
                     <input
                       type="number"
-                      id={`prixLivraison${methode}`}
-                      name={methode}
                       value={prix}
-                      onChange={(e) => handleChange(e, 'prixLivraison')}
+                      onChange={(e) => handleNestedInputChange('prixGravure', type, e.target.value)}
                       className={inputClass}
-                      min="0"
-                      step="0.01"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Tab.Panel>
+            <Tab.Panel>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(parametres.prixMetaux).map(([metal, prix]) => (
+                  <div key={metal}>
+                    <label className="block mb-2">{metal}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixMetaux', metal, e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Tab.Panel>
+            <Tab.Panel>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2">Prix Rhodiage</label>
+                  <input
+                    type="number"
+                    name="prixRhodiage"
+                    value={parametres.prixRhodiage}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                  />
+                </div>
+                {Object.entries(parametres.prixLivraison).map(([methode, prix]) => (
+                  <div key={methode}>
+                    <label className="block mb-2">Prix Livraison {methode}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixLivraison', methode, e.target.value)}
+                      className={inputClass}
                     />
                   </div>
                 ))}
@@ -256,15 +258,16 @@ const PageParametrageDevis = () => {
             </Tab.Panel>
           </Tab.Panels>
         </Tab.Group>
-
-        <div className="flex justify-end mt-8">
-          <button
-            type="submit"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 transition-colors duration-200"
-          >
-            Sauvegarder les paramètres
-          </button>
-        </div>
+        <button
+          type="submit"
+          className={`mt-4 px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
+            darkMode
+              ? 'bg-teal-600 text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500'
+              : 'bg-teal-500 text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-teal-500'
+          }`}
+        >
+          Sauvegarder les paramètres
+        </button>
       </form>
     </div>
   );

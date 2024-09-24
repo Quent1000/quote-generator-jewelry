@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import PriceInput from '../components/PriceInput';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const TimeInput = ({ label, hours, minutes, onChange, price, darkMode }) => {
   const selectClass = `w-full p-1 text-xs border rounded ${
@@ -170,15 +172,14 @@ const PageCreerDevis = () => {
   });
 
   useEffect(() => {
-    const savedParams = localStorage.getItem('parametresDevis');
-    if (savedParams) {
-      try {
-        const parsedParams = JSON.parse(savedParams);
-        setParametres(prev => ({...prev, ...parsedParams}));
-      } catch (error) {
-        console.error("Erreur lors du parsing des paramètres:", error);
+    const fetchParametres = async () => {
+      const docRef = doc(db, 'parametresDevis', 'default');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setParametres(docSnap.data());
       }
-    }
+    };
+    fetchParametres();
   }, []);
 
   const [autresPierres, setAutresPierres] = useState([{
