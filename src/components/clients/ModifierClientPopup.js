@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import ClientForm from './ClientForm';
 import useClientState from '../../hooks/useClientState';
 import { validateClientForm } from '../../utils/clientValidation';
 import { formatWebsite } from '../../utils/formatters';
+import useClients from '../../hooks/useClients'; // Ajoutez cette ligne
 
 const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdated }) => {
   const { clientData, entreprise, tags, updateClientData, updateEntreprise, setTags } = useClientState(client);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const { deleteClient } = useClients(); // Ajoutez cette ligne
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +47,19 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     }
   };
 
+  const handleDelete = async () => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.")) {
+      try {
+        await deleteClient(clientData.id);
+        onClose();
+        // Vous pouvez ajouter ici une notification ou un message de succès
+      } catch (error) {
+        console.error("Erreur lors de la suppression du client:", error);
+        // Gérez l'erreur (par exemple, affichez un message d'erreur à l'utilisateur)
+      }
+    }
+  };
+
   if (!isOpen || !clientData) return null;
 
   return (
@@ -65,24 +80,33 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
           errors={errors}
           darkMode={darkMode}
         />
-        <div className="flex justify-end space-x-4 mt-4">
+        <div className="flex justify-between space-x-4 mt-4">
           <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-full hover:bg-gray-400 transition-colors duration-300"
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-300"
           >
-            Annuler
+            <TrashIcon className="h-5 w-5 inline-block mr-2" />
+            Supprimer le client
           </button>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            className={`px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 ${
-              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Mise à jour...' : 'Mettre à jour le client'}
-          </button>
+          <div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-full hover:bg-gray-400 transition-colors duration-300"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className={`ml-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Mise à jour...' : 'Mettre à jour le client'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

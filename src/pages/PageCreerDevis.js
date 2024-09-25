@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PriceInput from '../components/PriceInput';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
 const TimeInput = ({ label, hours, minutes, onChange, price, darkMode }) => {
   const selectClass = `w-full p-1 text-xs border rounded ${
@@ -89,10 +89,27 @@ const PageCreerDevis = () => {
   }, []);
 
 
-  const clients = [
-    { id: 1, nom: 'david gusky', societe: 'DAVIDOR' },
-    { id: 2, nom: 'Quentin Imhoff', societe: 'TGN409' }
-  ];
+  const [clients, setClients] = useState([]);
+
+  // Fonction pour charger les clients depuis Firebase
+  const fetchClients = useCallback(async () => {
+    try {
+      const clientsCollection = collection(db, 'clients');
+      const clientsSnapshot = await getDocs(clientsCollection);
+      const clientsList = clientsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setClients(clientsList);
+    } catch (error) {
+      console.error("Erreur lors du chargement des clients:", error);
+    }
+  }, []);
+
+  // Charger les clients au montage du composant
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   const categoriesBijoux = [
     'Bague', 'Collier / Pendentif', 'Boucle d\'oreille', 'Bracelet', 'Autres'
@@ -379,7 +396,7 @@ const PageCreerDevis = () => {
               <select name="client" value={devis.client} onChange={handleChange} className={inputClass}>
                 <option value="">Sélectionner un client</option>
                 {clients.map(client => (
-                  <option key={client.id} value={client.id}>{client.nom} - {client.societe}</option>
+                  <option key={client.id} value={client.id}>{client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom} - {client.entreprise?.nom || 'Particulier'}</option>
                 ))}
               </select>
             </div>

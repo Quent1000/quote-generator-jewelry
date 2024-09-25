@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const useClients = () => {
@@ -69,6 +69,17 @@ const useClients = () => {
     setClients(updatedClients);
   };
 
+  const deleteClient = async (clientId) => {
+    try {
+      await deleteDoc(doc(db, 'clients', clientId));
+      setAllClients(prevClients => prevClients.filter(client => client.id !== clientId));
+      setClients(prevClients => prevClients.filter(client => client.id !== clientId));
+    } catch (error) {
+      console.error("Erreur lors de la suppression du client:", error);
+      throw error;
+    }
+  };
+
   return {
     clients: currentClients,
     searchTerm,
@@ -79,7 +90,8 @@ const useClients = () => {
     allClients,
     addClient,
     updateClient,
-    entreprises
+    entreprises,
+    deleteClient
   };
 };
 

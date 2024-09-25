@@ -22,16 +22,14 @@ const ClientCard = ({ client, onClick }) => {
     fetchEntreprise();
   }, [client.entrepriseId]);
 
-  // Fonction pour obtenir les initiales du client de manière sécurisée
   const getInitials = () => {
     const prenom = client.informationsPersonnelles?.prenom || '';
     const nom = client.informationsPersonnelles?.nom || '';
     return (prenom.charAt(0) + nom.charAt(0)).toUpperCase();
   };
 
-  // Vérification de la présence des données nécessaires
   if (!client || !client.informationsPersonnelles) {
-    return null; // ou un composant de fallback
+    return null;
   }
 
   return (
@@ -65,7 +63,7 @@ const ClientCard = ({ client, onClick }) => {
             <p className="text-sm text-gray-500 dark:text-gray-400">{entreprise?.nom || 'Chargement...'}</p>
           </div>
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2 min-h-[96px]"> {/* Ajout d'une hauteur minimale */}
           {client.informationsPersonnelles.email && (
             <p className="flex items-center text-sm">
               <EnvelopeIcon className="h-5 w-5 mr-2 text-teal-500" />
