@@ -3,6 +3,7 @@ import ClientList from '../components/clients/ClientList';
 import ClientDetails from '../components/clients/ClientDetails';
 import SearchInput from '../components/common/SearchInput';
 import NouveauClientPopup from '../components/clients/NouveauClientPopup';
+import ModifierClientPopup from '../components/clients/ModifierClientPopup';
 import useClients from '../hooks/useClients';
 import { useAppContext } from '../context/AppContext';
 import { PlusIcon } from '@heroicons/react/24/outline';
@@ -17,11 +18,13 @@ const PageClients = () => {
     paginate,
     totalPages,
     allClients,
-    addClient
+    addClient,
+    updateClient
   } = useClients();
 
   const [selectedClient, setSelectedClient] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isModifierPopupOpen, setIsModifierPopupOpen] = useState(false);
 
   const buttonClass = `
     group
@@ -85,6 +88,10 @@ const PageClients = () => {
           client={selectedClient}
           onClose={() => setSelectedClient(null)}
           darkMode={darkMode}
+          onEdit={() => {
+            setIsModifierPopupOpen(true);
+            setSelectedClient(null);
+          }}
         />
       )}
       <NouveauClientPopup
@@ -92,6 +99,16 @@ const PageClients = () => {
         onClose={() => setIsPopupOpen(false)}
         darkMode={darkMode}
         onClientAdded={addClient}
+      />
+      <ModifierClientPopup
+        isOpen={isModifierPopupOpen}
+        onClose={() => setIsModifierPopupOpen(false)}
+        client={selectedClient}
+        darkMode={darkMode}
+        onClientUpdated={(updatedClient) => {
+          updateClient(updatedClient);
+          setIsModifierPopupOpen(false);
+        }}
       />
     </div>
   );

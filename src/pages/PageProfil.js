@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, storage, auth } from '../firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useAppContext } from '../context/AppContext';
-import { CameraIcon, CheckCircleIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const PageProfil = () => {
   const { user, updateUser } = useAuth();
@@ -20,7 +20,6 @@ const PageProfil = () => {
   const [photoURL, setPhotoURL] = useState(user.photoURL || '');
   const [message, setMessage] = useState('');
   const fileInputRef = useRef(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -58,12 +57,17 @@ const PageProfil = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const updatedUserData = { ...userData, photoURL };
-      await setDoc(userRef, updatedUserData, { merge: true });
-      updateUser(updatedUserData);
+      const updatedUserData = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        role: userData.role,
+        phoneNumber: userData.phoneNumber,
+        photoURL: photoURL
+      };
+      await updateUser(updatedUserData);
       setMessage('Profil mis à jour avec succès');
-      setIsEditing(false);
+      // setIsEditing(false); // Removed as per instructions
     } catch (error) {
       setMessage(`Erreur lors de la mise à jour du profil: ${error.message}`);
     }
@@ -119,46 +123,33 @@ const PageProfil = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Prénom</label>
-                <input type="text" name="firstName" value={userData.firstName} onChange={handleInputChange} className={inputClass} disabled={!isEditing} />
+                <input type="text" name="firstName" value={userData.firstName} onChange={handleInputChange} className={inputClass} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nom</label>
-                <input type="text" name="lastName" value={userData.lastName} onChange={handleInputChange} className={inputClass} disabled={!isEditing} />
+                <input type="text" name="lastName" value={userData.lastName} onChange={handleInputChange} className={inputClass} />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
-              <input type="email" name="email" value={userData.email} onChange={handleInputChange} className={inputClass} disabled={!isEditing} />
+              <input type="email" name="email" value={userData.email} onChange={handleInputChange} className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Téléphone</label>
-                <input type="tel" name="phoneNumber" value={userData.phoneNumber} onChange={handleInputChange} className={inputClass} disabled={!isEditing} />
+                <input type="tel" name="phoneNumber" value={userData.phoneNumber} onChange={handleInputChange} className={inputClass} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Rôle</label>
-                <select name="role" value={userData.role} onChange={handleInputChange} className={inputClass} disabled={!isEditing}>
+                <select name="role" value={userData.role} onChange={handleInputChange} className={inputClass}>
                   <option value="">Sélectionner un rôle</option>
-                  <option value="admin">Administrateur</option>
                   <option value="user">Utilisateur</option>
                   <option value="manager">Manager</option>
                 </select>
               </div>
             </div>
             <div className="flex justify-between items-center">
-              {isEditing ? (
-                <>
-                  <button type="submit" className={buttonClass}>Sauvegarder les modifications</button>
-                  <button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    Annuler
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => setIsEditing(true)} className={`${buttonClass} flex items-center`}>
-                  <PencilIcon className="h-5 w-5 mr-2" />
-                  Modifier le profil
-                </button>
-              )}
+              <button type="submit" className={buttonClass}>Sauvegarder les modifications</button>
             </div>
           </form>
           

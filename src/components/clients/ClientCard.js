@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
-import { PhoneIcon, GlobeAltIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { PhoneIcon, EnvelopeIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../../context/AppContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { formatPhoneNumber } from '../../utils/formatPhoneNumber';
 
 const ClientCard = ({ client, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
   const { darkMode } = useAppContext();
+  const [entreprise, setEntreprise] = useState(null);
+
+  useEffect(() => {
+    const fetchEntreprise = async () => {
+      if (client.entrepriseId) {
+        const entrepriseDoc = await getDoc(doc(db, 'entreprises', client.entrepriseId));
+        if (entrepriseDoc.exists()) {
+          setEntreprise(entrepriseDoc.data());
+        }
+      }
+    };
+    fetchEntreprise();
+  }, [client.entrepriseId]);
 
   // Fonction pour obtenir les initiales du client de manière sécurisée
   const getInitials = () => {
@@ -29,16 +45,24 @@ const ClientCard = ({ client, onClick }) => {
     >
       <div className="px-6 py-4">
         <div className="flex items-center mb-2">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mr-4 ${
-            darkMode ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-800'
-          }`}>
-            {getInitials()}
-          </div>
+          {entreprise && entreprise.logo ? (
+            <img 
+              src={entreprise.logo} 
+              alt={`Logo ${entreprise.nom}`} 
+              className="w-12 h-12 rounded-full object-cover mr-4"
+            />
+          ) : (
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mr-4 ${
+              darkMode ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-800'
+            }`}>
+              {getInitials()}
+            </div>
+          )}
           <div>
             <h3 className="text-lg font-semibold">
               {client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{client.entreprise?.nom || 'N/A'}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{entreprise?.nom || 'Chargement...'}</p>
           </div>
         </div>
         <div className="mt-4 space-y-2">
@@ -51,13 +75,13 @@ const ClientCard = ({ client, onClick }) => {
           {client.informationsPersonnelles.telephone && (
             <p className="flex items-center text-sm">
               <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
-              {client.informationsPersonnelles.telephone}
+              {formatPhoneNumber(client.informationsPersonnelles.telephone)}
             </p>
           )}
-          {client.entreprise?.siteWeb && (
+          {entreprise?.siteWeb && (
             <p className="flex items-center text-sm">
               <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
-              {client.entreprise.siteWeb}
+              {entreprise.siteWeb}
             </p>
           )}
         </div>
