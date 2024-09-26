@@ -4,40 +4,21 @@ import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon } from '@heroicons/re
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import withRoleAccess from '../components/auth/withRoleAccess';
 
 const PageParametrageDevis = () => {
   const { darkMode } = useAppContext();
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [parametres, setParametres] = useState({
-    tauxHoraireCAO: 50,
-    tauxHoraireBijouterie: 50,
-    tauxHoraireAdministratif: 50,
-    prixSertissage: {
-      "Serti grain": 3,
-      "Serti rail": 4,
-      "Serti copeaux": 5,
-      "Serti clos": 6,
-      "Serti descendu": 7,
-      "Serti masse": 8
-    },
-    prixGravure: {
-      "Manuscrite": 20,
-      "Bâton": 15
-    },
-    prixMetaux: {
-      "JAUNE": 50000,
-      "GRIS": 55000,
-      "GPD": 60000,
-      "ROUGE 5N": 58000,
-      "ROSE 4N": 56000
-    },
-    prixRhodiage: 30,
-    prixLivraison: {
-      "Standard": 10,
-      "Express": 20,
-      "International": 30
-    }
+    tauxHoraireCAO: 0,
+    tauxHoraireBijouterie: 0,
+    tauxHoraireAdministratif: 0,
+    prixSertissage: {},
+    prixGravure: {},
+    prixMetaux: {},
+    prixRhodiage: 0,
+    prixLivraison: {}
   });
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const fetchParametres = useCallback(async () => {
     const docRef = doc(db, 'parametresDevis', 'default');
@@ -126,7 +107,9 @@ const PageParametrageDevis = () => {
 
   return (
     <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-      <h1 className="text-3xl font-bold mb-6">Paramétrage des devis</h1>
+      <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
+        Paramétrage des devis
+      </h1>
       <form onSubmit={handleSubmit}>
         <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
           <Tab.List className="flex space-x-2 rounded-xl bg-teal-900/20 p-1 mb-4">
@@ -188,7 +171,7 @@ const PageParametrageDevis = () => {
             </Tab.Panel>
             <Tab.Panel>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixSertissage).map(([type, prix]) => (
+                {Object.entries(parametres.prixSertissage || {}).map(([type, prix]) => (
                   <div key={type}>
                     <label className="block mb-2">{type}</label>
                     <input
@@ -273,4 +256,5 @@ const PageParametrageDevis = () => {
   );
 };
 
-export default PageParametrageDevis;
+// Exporter le composant avec le contrôle d'accès
+export default withRoleAccess(PageParametrageDevis, ['admin']);

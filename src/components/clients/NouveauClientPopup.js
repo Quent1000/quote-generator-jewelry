@@ -7,7 +7,7 @@ import TagInput from '../common/TagInput';
 
 const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
   const [client, setClient] = useState({
-    informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '' },
+    informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
     entrepriseId: '',
     relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
   });
@@ -165,12 +165,11 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
 
       const newClient = { id: docRef.id, ...clientToAdd };
       onClientAdded(newClient);
-      alert('Client ajouté avec succès !');
       onClose();
       
       // Réinitialiser le formulaire
       setClient({
-        informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '' },
+        informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
         entrepriseId: '',
         relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
       });
@@ -181,11 +180,9 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
       setTags([]);
       setRating(0);
     } catch (error) {
-      console.error("Erreur lors de l'ajout du client :", error);
-      alert("Une erreur s'est produite lors de l'ajout du client.");
+      console.error('Erreur lors de la création du client:', error);
     } finally {
       setIsSubmitting(false);
-      setUploadProgress(0);
     }
   };
 
@@ -230,12 +227,13 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                   type="text" 
                   id="nom" 
                   name="nom" 
-                  className={inputClass} 
+                  className={`${inputClass} ${errors.nom ? 'border-red-500' : ''}`}
                   value={client.informationsPersonnelles.nom} 
                   onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
                   required 
                   autoComplete="off"
                 />
+                {errors.nom && <p className="text-red-500 text-xs italic">{errors.nom}</p>}
               </div>
               <div>
                 <label className={labelClass} htmlFor="email">Email</label>
@@ -243,36 +241,50 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                   type="email" 
                   id="email" 
                   name="email" 
-                  className={inputClass} 
+                  className={`${inputClass} ${errors.email ? 'border-red-500' : ''}`}
                   value={client.informationsPersonnelles.email} 
                   onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
                   required 
                   autoComplete="off"
                 />
+                {errors.email && <p className="text-red-500 text-xs italic">{errors.email}</p>}
               </div>
               <div>
-                <label className={labelClass} htmlFor="telephone">Téléphone portable</label>
+                <label className={labelClass} htmlFor="telephone">Téléphone</label>
                 <input 
-                  type="tel" 
+                  type="text" 
                   id="telephone" 
                   name="telephone" 
-                  className={inputClass} 
+                  className={`${inputClass} ${errors.telephone ? 'border-red-500' : ''}`}
                   value={client.informationsPersonnelles.telephone} 
                   onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
                   required 
                   autoComplete="off"
                 />
+                {errors.telephone && <p className="text-red-500 text-xs italic">{errors.telephone}</p>}
               </div>
               <div>
                 <label className={labelClass} htmlFor="telFixe">Téléphone fixe</label>
                 <input 
-                  type="tel" 
+                  type="text" 
                   id="telFixe" 
                   name="telFixe" 
-                  className={inputClass} 
+                  className={inputClass}
                   value={client.informationsPersonnelles.telFixe} 
                   onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
                   autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="linkedinUrl">Profil LinkedIn</label>
+                <input 
+                  type="url" 
+                  id="linkedinUrl" 
+                  name="linkedinUrl" 
+                  className={inputClass}
+                  value={client.informationsPersonnelles.linkedinUrl} 
+                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
+                  placeholder="https://www.linkedin.com/in/username"
                 />
               </div>
             </div>
@@ -285,33 +297,57 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
             </h3>
             <div className="space-y-2">
               <div>
-                <label className={labelClass} htmlFor="entrepriseSelect">Sélectionner une entreprise</label>
+                <label className={labelClass} htmlFor="entreprise">Entreprise</label>
                 <select
-                  id="entrepriseSelect"
+                  id="entreprise"
+                  name="entreprise"
                   className={inputClass}
-                  value={client.entrepriseId}
+                  value={nouvelleEntreprise ? 'nouvelle' : client.entrepriseId}
                   onChange={handleEntrepriseChange}
                 >
                   <option value="">Sélectionner une entreprise</option>
-                  {entreprises.map(e => (
-                    <option key={e.id} value={e.id}>{e.nom}</option>
+                  {entreprises.map((ent) => (
+                    <option key={ent.id} value={ent.id}>{ent.nom}</option>
                   ))}
-                  <option value="nouvelle">+ Ajouter une nouvelle entreprise</option>
+                  <option value="nouvelle">Ajouter une nouvelle entreprise</option>
                 </select>
+                {errors.entrepriseId && <p className="text-red-500 text-xs italic">{errors.entrepriseId}</p>}
               </div>
               {nouvelleEntreprise && (
                 <>
                   <div>
-                    <label className={labelClass} htmlFor="entrepriseNom">Nom de l'entreprise</label>
-                    <input type="text" id="entrepriseNom" name="nom" className={inputClass} value={entreprise.nom} onChange={(e) => handleChange(e, 'entreprise')} required />
+                    <label className={labelClass} htmlFor="nomEntreprise">Nom de l'entreprise</label>
+                    <input
+                      type="text"
+                      id="nomEntreprise"
+                      name="nom"
+                      className={inputClass}
+                      value={entreprise.nom}
+                      onChange={(e) => handleChange(e, 'entreprise')}
+                      required
+                    />
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="adresse">Adresse</label>
-                    <input type="text" id="adresse" name="adresse" className={inputClass} value={entreprise.adresse} onChange={(e) => handleChange(e, 'entreprise')} />
+                    <input
+                      type="text"
+                      id="adresse"
+                      name="adresse"
+                      className={inputClass}
+                      value={entreprise.adresse}
+                      onChange={(e) => handleChange(e, 'entreprise')}
+                    />
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="siteWeb">Site web</label>
-                    <input type="url" id="siteWeb" name="siteWeb" className={inputClass} value={entreprise.siteWeb} onChange={(e) => handleChange(e, 'entreprise')} />
+                    <input
+                      type="url"
+                      id="siteWeb"
+                      name="siteWeb"
+                      className={inputClass}
+                      value={entreprise.siteWeb}
+                      onChange={(e) => handleChange(e, 'entreprise')}
+                    />
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="logo">Logo de l'entreprise</label>

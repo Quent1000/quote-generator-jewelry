@@ -1,60 +1,61 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  HomeIcon,
-  UserIcon,
-  DocumentTextIcon,
-  CogIcon,
-  MoonIcon,
-  SunIcon,
-  ArrowLeftOnRectangleIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
-import logo from '../../assets/devisapp-logo.png';
-
-const sidebarItems = [
-  { name: 'Tableau de bord', path: '/', icon: HomeIcon },
-  { name: 'Clients', path: '/clients', icon: UserIcon },
-  { name: 'Créer un devis', path: '/creer-devis', icon: DocumentTextIcon },
-  { name: 'Paramétrage devis', path: '/parametrage-devis', icon: CogIcon },
-  { name: 'Profil', path: '/profil', icon: UserCircleIcon },
-];
+import { useAppContext } from '../../context/AppContext';
+import { HomeIcon, UserIcon, CogIcon, DocumentTextIcon, UserGroupIcon, ChartBarIcon, SunIcon, MoonIcon, ArrowLeftOnRectangleIcon, UsersIcon } from '@heroicons/react/24/outline';
+import logo from '../../assets/devisapp-logo.png'; // Assurez-vous que le chemin est correct
 
 const Sidebar = () => {
+  const { user, isAdmin, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useAppContext();
-  const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const navItems = [
+    { name: 'Accueil', path: '/', icon: HomeIcon },
+    { name: 'Profil', path: '/profil', icon: UserIcon },
+    { name: 'Clients', path: '/clients', icon: UserGroupIcon },
+    { name: 'Devis', path: '/creer-devis', icon: DocumentTextIcon },
+    { name: 'Tableau de bord', path: '/tableau-de-bord', icon: ChartBarIcon },
+  ];
+
+  // Ajouter les éléments de menu pour les administrateurs
+  if (isAdmin) {
+    navItems.push(
+      { name: 'Paramètres', path: '/parametrage-devis', icon: CogIcon },
+      { name: 'Gestion Utilisateurs', path: '/gestion-utilisateurs', icon: UsersIcon }
+    );
+  }
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/login');
     } catch (error) {
-      console.error("Erreur lors de la déconnexion", error);
+      console.error("Erreur lors de la déconnexion:", error);
     }
   };
 
-  const navItemClass = `flex items-center px-4 py-3 text-gray-600 hover:bg-teal-50 hover:text-teal-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200`;
-  const activeNavItemClass = `${navItemClass} bg-teal-50 dark:bg-gray-700 text-teal-600 dark:text-teal-400 font-medium`;
-
   return (
-    <div className={`w-64 h-screen flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-white'} border-r border-gray-200 dark:border-gray-700`}>
+    <div className={`w-64 h-screen ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} flex flex-col`}>
       <div className="flex items-center justify-center h-24 border-b border-gray-200 dark:border-gray-700">
         <img src={logo} alt="DevisApp Logo" className="h-auto w-auto max-h-20 max-w-[80%]" />
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1 px-3">
-          {sidebarItems.map((item) => (
+        <ul className="space-y-2 py-4">
+          {navItems.map((item) => (
             <li key={item.name}>
-              <NavLink
+              <Link
                 to={item.path}
-                className={({ isActive }) => isActive ? activeNavItemClass : navItemClass}
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                  location.pathname === item.path
+                    ? 'bg-teal-500 text-white'
+                    : 'hover:bg-teal-100 hover:text-teal-500'
+                }`}
               >
-                <item.icon className="w-6 h-6 mr-3" />
-                <span className="text-sm font-medium">{item.name}</span>
-              </NavLink>
+                <item.icon className="mr-3 h-6 w-6" />
+                {item.name}
+              </Link>
             </li>
           ))}
         </ul>
@@ -62,11 +63,13 @@ const Sidebar = () => {
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <img
-              className="h-8 w-8 rounded-full mr-2"
-              src={user.photoURL || "https://via.placeholder.com/32"}
-              alt="User avatar"
-            />
+            <div className="w-8 h-8 mr-2 overflow-hidden rounded-full">
+              <img
+                className="w-full h-full object-cover"
+                src={user.photoURL || "https://via.placeholder.com/32"}
+                alt="User avatar"
+              />
+            </div>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {user.firstName && user.lastName
                 ? `${user.firstName} ${user.lastName}`

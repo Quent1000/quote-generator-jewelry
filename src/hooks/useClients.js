@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const useClients = () => {
@@ -11,25 +11,27 @@ const useClients = () => {
   const [entreprises, setEntreprises] = useState({});
 
   useEffect(() => {
-    fetchClientsAndEntreprises();
-  }, []);
-
-  const fetchClientsAndEntreprises = async () => {
-    const clientsCollection = collection(db, 'clients');
-    const clientsSnapshot = await getDocs(clientsCollection);
-    const clientsList = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const entreprisesCollection = collection(db, 'entreprises');
-    const entreprisesSnapshot = await getDocs(entreprisesCollection);
-    const entreprisesMap = {};
-    entreprisesSnapshot.docs.forEach(doc => {
-      entreprisesMap[doc.id] = doc.data();
+    const unsubscribe = onSnapshot(collection(db, 'clients'), (snapshot) => {
+      const clientsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllClients(clientsList);
+      setClients(clientsList);
     });
 
-    setAllClients(clientsList);
-    setClients(clientsList);
-    setEntreprises(entreprisesMap);
-  };
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchEntreprises = async () => {
+      const entreprisesSnapshot = await getDocs(collection(db, 'entreprises'));
+      const entreprisesMap = {};
+      entreprisesSnapshot.docs.forEach(doc => {
+        entreprisesMap[doc.id] = doc.data();
+      });
+      setEntreprises(entreprisesMap);
+    };
+
+    fetchEntreprises();
+  }, []);
 
   useEffect(() => {
     const filteredClients = allClients.filter(client => {
@@ -55,25 +57,37 @@ const useClients = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const addClient = async (newClient) => {
-    const docRef = await addDoc(collection(db, 'clients'), newClient);
-    const clientWithId = { id: docRef.id, ...newClient };
-    setAllClients([...allClients, clientWithId]);
-    setClients([...clients, clientWithId]);
+    // Vérifier si un client avec le même email existe déjà
+    const clientsCollection = collection(db, 'clients');
+    const clientsSnapshot = await getDocs(clientsCollection);
+    const existingClient = clientsSnapshot.docs.find(doc => doc.data().informationsPersonnelles.email === newClient.informationsPersonnelles.email);
+
+    if (existingClient) {
+      console.log('Client déjà existant avec cet email:', existingClient.id);
+      return; // Ne pas ajouter le client si un client avec le même email existe déjà
+    }
+
+    await addDoc(clientsCollection, newClient);
   };
 
-  const updateClient = (updatedClient) => {
-    const updatedClients = allClients.map(client =>
-      client.id === updatedClient.id ? updatedClient : client
-    );
-    setAllClients(updatedClients);
-    setClients(updatedClients);
+  const updateClient = async (updatedClient) => {
+    try {
+      const clientRef = doc(db, 'clients', updatedClient.id);
+      await updateDoc(clientRef, updatedClient);
+      const updatedClients = allClients.map(client =>
+        client.id === updatedClient.id ? updatedClient : client
+      );
+      setAllClients(updatedClients);
+      setClients(updatedClients);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du client:", error);
+      throw error;
+    }
   };
 
   const deleteClient = async (clientId) => {
     try {
       await deleteDoc(doc(db, 'clients', clientId));
-      setAllClients(prevClients => prevClients.filter(client => client.id !== clientId));
-      setClients(prevClients => prevClients.filter(client => client.id !== clientId));
     } catch (error) {
       console.error("Erreur lors de la suppression du client:", error);
       throw error;

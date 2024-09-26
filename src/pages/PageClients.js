@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ClientList from '../components/clients/ClientList';
 import ClientDetails from '../components/clients/ClientDetails';
 import SearchInput from '../components/common/SearchInput';
@@ -25,6 +25,10 @@ const PageClients = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isModifierPopupOpen, setIsModifierPopupOpen] = useState(false);
+
+  useEffect(() => {
+    // Réagir aux changements de l'état des clients
+  }, [clients]);
 
   const buttonClass = `
     group
@@ -98,7 +102,10 @@ const PageClients = () => {
         isOpen={isPopupOpen}
         onClose={() => setIsPopupOpen(false)}
         darkMode={darkMode}
-        onClientAdded={addClient}
+        onClientAdded={(newClient) => {
+          addClient(newClient);
+          setIsPopupOpen(false);
+        }}
       />
       <ModifierClientPopup
         isOpen={isModifierPopupOpen}

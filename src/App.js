@@ -9,6 +9,9 @@ import PageCreerDevis from './pages/PageCreerDevis';
 import PageParametrageDevis from './pages/PageParametrageDevis';
 import LoginPage from './pages/LoginPage';
 import PageProfil from './pages/PageProfil';
+import PageAccesRefuse from './pages/PageAccesRefuse';
+import PageGestionUtilisateurs from './pages/PageGestionUtilisateurs';
+import withRoleAccess from './components/auth/withRoleAccess';
 
 const App = () => {
   return (
@@ -29,6 +32,9 @@ const AppContent = () => {
     return <LoginPage />;
   }
 
+  const ProtectedPageParametrageDevis = withRoleAccess(PageParametrageDevis, ['admin']);
+  const ProtectedPageGestionUtilisateurs = withRoleAccess(PageGestionUtilisateurs, ['admin']);
+
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900">
       <Sidebar />
@@ -37,8 +43,10 @@ const AppContent = () => {
           <Route path="/" element={<PageTableauDeBord />} />
           <Route path="/clients" element={<PageClients />} />
           <Route path="/creer-devis" element={<PageCreerDevis />} />
-          <Route path="/parametrage-devis" element={<PageParametrageDevis />} />
+          <Route path="/parametrage-devis" element={<ProtectedPageParametrageDevis />} />
           <Route path="/profil" element={<PageProfil />} />
+          <Route path="/acces-refuse" element={<PageAccesRefuse />} />
+          <Route path="/gestion-utilisateurs" element={<ProtectedPageGestionUtilisateurs />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

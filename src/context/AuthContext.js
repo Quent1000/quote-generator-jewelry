@@ -7,6 +7,10 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const isAdmin = (user) => {
+  return user && user.role === 'admin';
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +28,7 @@ export const AuthProvider = ({ children }) => {
               email: firebaseUser.email,
               firstName: '',
               lastName: '',
+              role: 'user', // Ajout du rôle par défaut
             });
           }
           
@@ -33,6 +38,7 @@ export const AuthProvider = ({ children }) => {
             firstName: userData?.firstName || '',
             lastName: userData?.lastName || '',
             photoURL: userData?.photoURL || '',
+            role: userData?.role || 'user', // Ajout du rôle
           });
         } catch (error) {
           console.error("Erreur lors de la récupération des données utilisateur:", error);
@@ -94,12 +100,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setUserAsAdmin = async (userId) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, { role: 'admin' });
+      if (user && user.uid === userId) {
+        setUser(currentUser => ({ ...currentUser, role: 'admin' }));
+      }
+    } catch (error) {
+      console.error("Erreur lors de la définition de l'utilisateur comme admin:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
     updateUser,
-    resetPassword
+    resetPassword,
+    isAdmin: user ? isAdmin(user) : false,
+    setUserAsAdmin,
   };
 
   return (
