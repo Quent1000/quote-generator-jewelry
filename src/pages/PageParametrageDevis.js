@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tab } from '@headlessui/react';
-import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -12,11 +12,35 @@ const PageParametrageDevis = () => {
     tauxHoraireCAO: 0,
     tauxHoraireBijouterie: 0,
     tauxHoraireAdministratif: 0,
+    tauxHoraireDesign: 0,
     prixSertissage: {},
-    prixGravure: {},
-    prixMetaux: {},
+    prixGravure: {
+      "Manuscrite": 20,
+      "Bâton": 15
+    },
+    prixMetaux: {
+      "Or Jaune 3N": 0,
+      "Or Rouge 5N": 0,
+      "Or Rose 4N": 0,
+      "Or Gris": 0,
+      "Or Gris Palladié": 0,
+      "Argent 925": 0,
+      "Or jaune 24K": 0,
+      "Or jaune 2N": 0
+    },
     prixRhodiage: 0,
-    prixLivraison: {}
+    prixLivraison: {},
+    prixDiamantsRonds: {
+      "0.50 - 1.20 mm": 600,
+      "1.25 - 1.75 mm": 580,
+      "1.80 - 2.65 mm": 600,
+      "2.70 - 3.25 mm": 870,
+      "3.30 - 3.50 mm": 1098,
+      "3.55 - 3.65 mm": 1056,
+      "3.70 - 3.85 mm": 1185,
+      "3.90 - 4.10 mm": 1440,
+      "4.15 - 4.55 mm": 2360
+    }
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -24,13 +48,29 @@ const PageParametrageDevis = () => {
     const docRef = doc(db, 'parametresDevis', 'default');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      setParametres(docSnap.data());
+      const data = docSnap.data();
+      setParametres({
+        ...data,
+        tauxHoraireDesign: data.tauxHoraireDesign || 0,
+        prixDiamantsRonds: data.prixDiamantsRonds || {
+          "0.50 - 1.20 mm": 600,
+          "1.25 - 1.75 mm": 580,
+          "1.80 - 2.65 mm": 600,
+          "2.70 - 3.25 mm": 870,
+          "3.30 - 3.50 mm": 1098,
+          "3.55 - 3.65 mm": 1056,
+          "3.70 - 3.85 mm": 1185,
+          "3.90 - 4.10 mm": 1440,
+          "4.15 - 4.55 mm": 2360
+        }
+      });
     } else {
       // Utilisez une fonction pour obtenir les valeurs initiales
       const getInitialParametres = () => ({
         tauxHoraireCAO: 50,
         tauxHoraireBijouterie: 50,
         tauxHoraireAdministratif: 50,
+        tauxHoraireDesign: 50,
         prixSertissage: {
           "Serti grain": 3,
           "Serti rail": 4,
@@ -44,17 +84,31 @@ const PageParametrageDevis = () => {
           "Bâton": 15
         },
         prixMetaux: {
-          "JAUNE": 50000,
-          "GRIS": 55000,
-          "GPD": 60000,
-          "ROUGE 5N": 58000,
-          "ROSE 4N": 56000
+          "Or Jaune 3N": 72000,
+          "Or Rouge 5N": 70000,
+          "Or Rose 4N": 68000,
+          "Or Gris": 65000,
+          "Or Gris Palladié": 60000,
+          "Argent 925": 55000,
+          "Or jaune 24K": 75000,
+          "Or jaune 2N": 70000
         },
         prixRhodiage: 30,
         prixLivraison: {
           "Standard": 10,
           "Express": 20,
           "International": 30
+        },
+        prixDiamantsRonds: {
+          "0.50 - 1.20 mm": 600,
+          "1.25 - 1.75 mm": 580,
+          "1.80 - 2.65 mm": 600,
+          "2.70 - 3.25 mm": 870,
+          "3.30 - 3.50 mm": 1098,
+          "3.55 - 3.65 mm": 1056,
+          "3.70 - 3.85 mm": 1185,
+          "3.90 - 4.10 mm": 1440,
+          "4.15 - 4.55 mm": 2360
         }
       });
       const initialParametres = getInitialParametres();
@@ -82,11 +136,23 @@ const PageParametrageDevis = () => {
     }));
   }, []);
 
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000); // La notification disparaît après 3 secondes
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const docRef = doc(db, 'parametresDevis', 'default');
-    await setDoc(docRef, parametres);
-    alert('Paramètres sauvegardés avec succès dans Firestore !');
+    try {
+      await setDoc(docRef, parametres);
+      showNotification('Les paramètres ont été mis à jour avec succès.', 'success');
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde des paramètres :", error);
+      showNotification('Une erreur est survenue lors de la mise à jour des paramètres.', 'error');
+    }
   };
 
   const tabClass = `px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
@@ -167,6 +233,16 @@ const PageParametrageDevis = () => {
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className="block mb-2">Taux horaire Design</label>
+                  <input
+                    type="number"
+                    name="tauxHoraireDesign"
+                    value={parametres.tauxHoraireDesign}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>
@@ -178,6 +254,21 @@ const PageParametrageDevis = () => {
                       type="number"
                       value={prix}
                       onChange={(e) => handleNestedInputChange('prixSertissage', type, e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix diamants ronds (€/carat)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(parametres.prixDiamantsRonds).map(([taille, prix]) => (
+                  <div key={taille}>
+                    <label className="block mb-2">{taille}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixDiamantsRonds', taille, e.target.value)}
                       className={inputClass}
                     />
                   </div>
@@ -200,15 +291,18 @@ const PageParametrageDevis = () => {
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(parametres.prixMetaux).map(([metal, prix]) => (
                   <div key={metal}>
-                    <label className="block mb-2">{metal}</label>
+                    <label className="block mb-2">{metal} (€/kg)</label>
                     <input
                       type="number"
                       value={prix}
                       onChange={(e) => handleNestedInputChange('prixMetaux', metal, e.target.value)}
                       className={inputClass}
+                      min="0"
+                      step="0.01"
+                      placeholder="ex: 72000"
                     />
                   </div>
                 ))}
@@ -252,6 +346,19 @@ const PageParametrageDevis = () => {
           Sauvegarder les paramètres
         </button>
       </form>
+
+      {notification && (
+        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ${
+          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white flex items-center`}>
+          {notification.type === 'success' ? (
+            <CheckCircleIcon className="w-5 h-5 mr-2" />
+          ) : (
+            <XCircleIcon className="w-5 h-5 mr-2" />
+          )}
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };
