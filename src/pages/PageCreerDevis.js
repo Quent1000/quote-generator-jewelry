@@ -176,6 +176,24 @@ const PageCreerDevis = () => {
 
   const [valeurMetal, setValeurMetal] = useState(0);
 
+  const [totalPrixDiamants, setTotalPrixDiamants] = useState(0);
+  const [totalPrixSertissage, setTotalPrixSertissage] = useState(0); // Nouvel état pour le total du sertissage
+
+  const calculerTotalPrixDiamants = useCallback(() => {
+    const total = devis.diamants.reduce((sum, diamant) => sum + (diamant.prixTotal || 0), 0);
+    setTotalPrixDiamants(total);
+  }, [devis.diamants]);
+
+  const calculerTotalPrixSertissage = useCallback(() => {
+    const total = devis.diamants.reduce((sum, diamant) => sum + (diamant.prixSertissage || 0), 0);
+    setTotalPrixSertissage(total);
+  }, [devis.diamants]);
+
+  useEffect(() => {
+    calculerTotalPrixDiamants();
+    calculerTotalPrixSertissage();
+  }, [calculerTotalPrixDiamants, calculerTotalPrixSertissage]);
+
   useEffect(() => {
     console.log("Images actuelles:", images);
     console.log("Index de l'image principale:", mainImageId);
@@ -407,6 +425,8 @@ const PageCreerDevis = () => {
     }
 
     setDevis(prev => ({ ...prev, diamants: newDiamants }));
+    calculerTotalPrixDiamants();
+    calculerTotalPrixSertissage();
   };
 
   const handleAutresPierresChange = (index, field, value) => {
@@ -910,6 +930,27 @@ const PageCreerDevis = () => {
         >
           Ajouter un diamant
         </button>
+
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-2 font-semibold">Total prix diamants</label>
+            <input
+              type="text"
+              value={`${totalPrixDiamants.toFixed(2)} €`}
+              readOnly
+              className={`${inputClass} w-full bg-gray-100`}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold">Total prix sertissage</label>
+            <input
+              type="text"
+              value={`${totalPrixSertissage.toFixed(2)} €`}
+              readOnly
+              className={`${inputClass} w-full bg-gray-100`}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="mb-8">
