@@ -6,6 +6,7 @@ import { db, storage } from '../../firebase';
 import TagInput from '../common/TagInput';
 import useFormValidation from '../../hooks/useFormValidation';
 import { formatPhoneNumber } from '../../utils/formatPhoneNumber';
+import FormInput from '../common/FormInput';
 
 const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdated }) => {
   const [clientData, setClientData] = useState({
@@ -20,6 +21,8 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     adresse: '',
     siteWeb: '',
     logo: '',
+    siren: '',  // Ajout du champ SIREN
+    siret: '',  // Ajout du champ SIRET
   });
 
   const [logoFile, setLogoFile] = useState(null);
@@ -75,6 +78,14 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
       }
       return null;
     },
+    'entreprise.siren': (value) => {
+      if (value && !/^[0-9]{9}$/.test(value)) return "Le SIREN doit contenir 9 chiffres";
+      return null;
+    },
+    'entreprise.siret': (value) => {
+      if (value && !/^[0-9]{14}$/.test(value)) return "Le SIRET doit contenir 14 chiffres";
+      return null;
+    },
     // Ajoutez d'autres règles de validation si nécessaire
   };
 
@@ -109,7 +120,7 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
       } else {
         // Réinitialiser le logo si le client n'a pas d'entreprise
         setPreviewUrl('');
-        setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '' });
+        setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '', siren: '', siret: '' });
       }
     }
   }, [client]);
@@ -223,7 +234,7 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
           tags: prev.relationClient.tags.includes('Particulier') ? prev.relationClient.tags : [...prev.relationClient.tags, 'Particulier']
         }
       }));
-      setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '' });
+      setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '', siren: '', siret: '' });
       setPreviewUrl('');
     } else {
       // Charger les données de la nouvelle entreprise sélectionnée
@@ -442,6 +453,22 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
                     onChange={handleEntrepriseFieldChange}
                     className={inputClass}
                     placeholder="Site web de l'entreprise"
+                  />
+                  <FormInput
+                    label="SIREN"
+                    name="siren"
+                    value={entreprise.siren}
+                    onChange={(e) => handleEntrepriseFieldChange(e)}
+                    error={errors['entreprise.siren']}
+                    darkMode={darkMode}
+                  />
+                  <FormInput
+                    label="SIRET"
+                    name="siret"
+                    value={entreprise.siret}
+                    onChange={(e) => handleEntrepriseFieldChange(e)}
+                    error={errors['entreprise.siret']}
+                    darkMode={darkMode}
                   />
                   <div>
                     <label className={`block mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>

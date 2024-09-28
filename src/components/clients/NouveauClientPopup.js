@@ -19,6 +19,8 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
       nom: '',
       adresse: '',
       siteWeb: '',
+      siren: '',  // Ajout du champ SIREN
+      siret: '',  // Ajout du champ SIRET
     },
     nouvelleEntreprise: false,
     logoFile: null,
@@ -62,6 +64,14 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
       if (value && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(value)) {
         return "Format d'URL invalide";
       }
+      return null;
+    },
+    'entreprise.siren': (value) => {
+      if (value && !/^[0-9]{9}$/.test(value)) return "Le SIREN doit contenir 9 chiffres";
+      return null;
+    },
+    'entreprise.siret': (value) => {
+      if (value && !/^[0-9]{14}$/.test(value)) return "Le SIRET doit contenir 14 chiffres";
       return null;
     },
   };
@@ -430,6 +440,22 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                     value={formData.entreprise.siteWeb}
                     onChange={(e) => handleChange(e, 'entreprise')}
                     error={errors['entreprise.siteWeb']}
+                    darkMode={darkMode}
+                  />
+                  <FormInput
+                    label="SIREN"
+                    name="siren"
+                    value={formData.entreprise.siren}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.siren']}
+                    darkMode={darkMode}
+                  />
+                  <FormInput
+                    label="SIRET"
+                    name="siret"
+                    value={formData.entreprise.siret}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.siret']}
                     darkMode={darkMode}
                   />
                   <div>

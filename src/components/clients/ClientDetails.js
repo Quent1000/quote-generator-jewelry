@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, ChatBubbleLeftRightIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, ChatBubbleLeftRightIcon, XMarkIcon, PencilIcon, IdentificationIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -53,23 +53,23 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
             )}
             <div>
               <h2 className="text-2xl font-bold">{client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}</h2>
-              <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                {entreprise ? entreprise.nom : 'Particulier'}
-              </p>
+              {entreprise && <p className="text-gray-600 dark:text-gray-400">{entreprise.nom}</p>}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">Informations de contact</h3>
               <ul className="space-y-2">
                 <li className="flex items-center">
                   <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
-                  <span>Portable : {formatPhoneNumber(client.informationsPersonnelles.telephone)}</span>
+                  <span>{formatPhoneNumber(client.informationsPersonnelles.telephone)}</span>
                 </li>
-                <li className="flex items-center">
-                  <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
-                  <span>Fixe : {client.informationsPersonnelles.telFixe ? formatPhoneNumber(client.informationsPersonnelles.telFixe) : 'Non renseigné'}</span>
-                </li>
+                {client.informationsPersonnelles.telFixe && (
+                  <li className="flex items-center">
+                    <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
+                    <span>{formatPhoneNumber(client.informationsPersonnelles.telFixe)} (Fixe)</span>
+                  </li>
+                )}
                 <li className="flex items-center">
                   <EnvelopeIcon className="h-5 w-5 mr-2 text-teal-500" />
                   <span>{client.informationsPersonnelles.email}</span>
@@ -77,12 +77,7 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
                 {entreprise && entreprise.siteWeb && (
                   <li className="flex items-center">
                     <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
-                    <a 
-                      href={entreprise.siteWeb.startsWith('http') ? entreprise.siteWeb : `https://${entreprise.siteWeb}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                    >
+                    <a href={entreprise.siteWeb} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
                       {entreprise.siteWeb}
                     </a>
                   </li>
@@ -90,7 +85,7 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
                 {client.informationsPersonnelles.linkedinUrl && (
                   <li className="flex items-center">
                     <img src={linkedinIcon} alt="LinkedIn" className="h-5 w-5 mr-2" />
-                    <a 
+                    <a
                       href={client.informationsPersonnelles.linkedinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -113,6 +108,18 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
                   <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2 text-teal-500 mt-1" />
                   <span>Commentaire : {client.relationClient.commentaireInterne || 'Aucun commentaire'}</span>
                 </li>
+                {entreprise && entreprise.siren && (
+                  <li className="flex items-center">
+                    <IdentificationIcon className="h-5 w-5 mr-2 text-teal-500" />
+                    <span>SIREN : {entreprise.siren}</span>
+                  </li>
+                )}
+                {entreprise && entreprise.siret && (
+                  <li className="flex items-center">
+                    <IdentificationIcon className="h-5 w-5 mr-2 text-teal-500" />
+                    <span>SIRET : {entreprise.siret}</span>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
