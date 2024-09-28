@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tab } from '@headlessui/react';
-import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon, FingerPrintIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon, FingerPrintIcon, CubeIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -31,7 +31,13 @@ const PageParametrageDevis = () => {
       "Or jaune 2N": 0
     },
     prixRhodiage: 0,
-    prixLivraison: {},
+    prixLivraison: {
+      "VD La Poste": 30, // Anciennement "International"
+      "DHL": 10, // Anciennement "Standard"
+      "DHL Express": 20, // Anciennement "Express"
+      "Fedex": 25, // Nouveau
+      "Récupération sur site": 0 // Nouveau
+    },
     prixDiamantsRonds: {
       "0.50 - 1.20 mm": 600,
       "1.25 - 1.75 mm": 580,
@@ -56,9 +62,27 @@ const PageParametrageDevis = () => {
         gravureLogoMarque: 3,
         gravureNumeroSerie: 8
       }
+    },
+    prixFonte: {
+      "Moins de 6g": 10.00,
+      "Moins de 12g": 15.00,
+      "Plus de 12g": 18.00
+    },
+    prixImpressionCire: {
+      "Petite impression": 10.00,
+      "Moyenne impression": 15.00,
+      "Grosse impression": 18.00
+    },
+    prixImpressionResine: {
+      "Petite impression": 20.00,
+      "Moyenne impression": 30.00,
+      "Grosse impression": 40.00
     }
   });
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    // Récupérer l'index sauvegardé dans localStorage, ou utiliser 0 par défaut
+    return parseInt(localStorage.getItem('selectedTabIndex') || '0');
+  });
 
   const fetchParametres = useCallback(async () => {
     const docRef = doc(db, 'parametresDevis', 'default');
@@ -93,6 +117,28 @@ const PageParametrageDevis = () => {
             gravureLogoMarque: 3,
             gravureNumeroSerie: 8
           }
+        },
+        prixFonte: data.prixFonte || {
+          "Moins de 6g": 10.00,
+          "Moins de 12g": 15.00,
+          "Plus de 12g": 18.00
+        },
+        prixImpressionCire: data.prixImpressionCire || {
+          "Petite impression": 10.00,
+          "Moyenne impression": 15.00,
+          "Grosse impression": 18.00
+        },
+        prixImpressionResine: data.prixImpressionResine || {
+          "Petite impression": 20.00,
+          "Moyenne impression": 30.00,
+          "Grosse impression": 40.00
+        },
+        prixLivraison: {
+          "VD La Poste": data.prixLivraison?.["VD La Poste"] || data.prixLivraison?.International || 30,
+          "DHL": data.prixLivraison?.["DHL"] || data.prixLivraison?.Standard || 10,
+          "DHL Express": data.prixLivraison?.["DHL Express"] || data.prixLivraison?.Express || 20,
+          "Fedex": data.prixLivraison?.["Fedex"] || 25,
+          "Récupération sur site": data.prixLivraison?.["Récupération sur site"] || 0
         }
       });
     } else {
@@ -127,9 +173,11 @@ const PageParametrageDevis = () => {
         },
         prixRhodiage: 30,
         prixLivraison: {
-          "Standard": 10,
-          "Express": 20,
-          "International": 30
+          "VD La Poste": 30, // Anciennement "International"
+          "DHL": 10, // Anciennement "Standard"
+          "DHL Express": 20, // Anciennement "Express"
+          "Fedex": 25, // Nouveau
+          "Récupération sur site": 0 // Nouveau
         },
         prixDiamantsRonds: {
           "0.50 - 1.20 mm": 600,
@@ -155,6 +203,21 @@ const PageParametrageDevis = () => {
             gravureLogoMarque: 3,
             gravureNumeroSerie: 8
           }
+        },
+        prixFonte: {
+          "Moins de 6g": 10.00,
+          "Moins de 12g": 15.00,
+          "Plus de 12g": 18.00
+        },
+        prixImpressionCire: {
+          "Petite impression": 10.00,
+          "Moyenne impression": 15.00,
+          "Grosse impression": 18.00
+        },
+        prixImpressionResine: {
+          "Petite impression": 20.00,
+          "Moyenne impression": 30.00,
+          "Grosse impression": 40.00
         }
       });
       const initialParametres = getInitialParametres();
@@ -236,6 +299,11 @@ const PageParametrageDevis = () => {
       : 'bg-white text-gray-900 border-gray-300 focus:border-teal-500 focus:ring-teal-500'
   } border focus:outline-none focus:ring-2`;
 
+  // Ajouter cet effet pour sauvegarder l'index sélectionné dans localStorage
+  useEffect(() => {
+    localStorage.setItem('selectedTabIndex', selectedIndex.toString());
+  }, [selectedIndex]);
+
   return (
     <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
       <h1 className="text-3xl font-bold mb-8">Paramétrage des devis</h1>
@@ -265,6 +333,10 @@ const PageParametrageDevis = () => {
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <FingerPrintIcon className="w-5 h-5 mr-2 inline-block" />
               Poinçons et Marques
+            </Tab>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <CubeIcon className="w-5 h-5 mr-2 inline-block" />
+              Impression 3D et Fonte
             </Tab>
           </Tab.List>
           <Tab.Panels>
@@ -311,7 +383,7 @@ const PageParametrageDevis = () => {
                   />
                 </div>
                 <div>
-                  <label className="block mb-2">Taux horaire Dé-sertissage</label>
+                  <label className="block mb-2">Taux horaire Désertissage</label>
                   <input
                     type="number"
                     name="tauxHoraireDesertissage"
@@ -397,28 +469,38 @@ const PageParametrageDevis = () => {
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block mb-2">Prix Rhodiage</label>
-                  <input
-                    type="number"
-                    name="prixRhodiage"
-                    value={parametres.prixRhodiage}
-                    onChange={handleInputChange}
-                    className={inputClass}
-                  />
-                </div>
-                {Object.entries(parametres.prixLivraison).map(([methode, prix]) => (
-                  <div key={methode}>
-                    <label className="block mb-2">Prix Livraison {methode}</label>
+                  <h3 className="text-xl font-semibold mb-4">Prix Rhodiage</h3>
+                  <div>
+                    <label className="block mb-2">Prix Rhodiage</label>
                     <input
                       type="number"
-                      value={prix}
-                      onChange={(e) => handleNestedInputChange('prixLivraison', methode, e.target.value)}
+                      name="prixRhodiage"
+                      value={parametres.prixRhodiage}
+                      onChange={handleInputChange}
                       className={inputClass}
+                      step="0.01"
                     />
                   </div>
-                ))}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Prix Livraison</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {Object.entries(parametres.prixLivraison).map(([methode, prix]) => (
+                      <div key={methode}>
+                        <label className="block mb-2">Prix Livraison {methode}</label>
+                        <input
+                          type="number"
+                          value={prix}
+                          onChange={(e) => handleNestedInputChange('prixLivraison', methode, e.target.value)}
+                          className={inputClass}
+                          step="0.01"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>
@@ -491,6 +573,91 @@ const PageParametrageDevis = () => {
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+            </Tab.Panel>
+            <Tab.Panel>
+              <h3 className="text-xl font-semibold mb-4">Prix de la fonte</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(parametres.prixFonte).map(([poids, prix]) => (
+                  <div key={poids}>
+                    <label className="block mb-2">{poids}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixFonte', poids, e.target.value)}
+                      className={inputClass}
+                      step="0.01"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix impression cire</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block mb-2">Petite impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionCire["Petite impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionCire', 'Petite impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Moyenne impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionCire["Moyenne impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionCire', 'Moyenne impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Grosse impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionCire["Grosse impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionCire', 'Grosse impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix impression résine</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block mb-2">Petite impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionResine["Petite impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionResine', 'Petite impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Moyenne impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionResine["Moyenne impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionResine', 'Moyenne impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Grosse impression</label>
+                  <input
+                    type="number"
+                    value={parametres.prixImpressionResine["Grosse impression"]}
+                    onChange={(e) => handleNestedInputChange('prixImpressionResine', 'Grosse impression', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
                 </div>
               </div>
             </Tab.Panel>

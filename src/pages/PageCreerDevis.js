@@ -40,6 +40,8 @@ const PageCreerDevis = () => {
     tempsCAO: { heures: 0, minutes: 0 },
     tempsRepare: { heures: 0, minutes: 0 },
     tempsPolissage: { heures: 0, minutes: 0 },
+    tempsDessertissage: { heures: 0, minutes: 0 },
+    tempsDesign: { heures: 0, minutes: 0 },
     tarifFonte: '',
     tarifImpressionCire: '',
     tarifImpressionResine: '',
@@ -60,6 +62,15 @@ const PageCreerDevis = () => {
       marque: {}
     },
     coefficientDiamantsRonds: 1.15
+  });
+
+  const [tauxHoraires, setTauxHoraires] = useState({
+    administratif: 0,
+    cao: 0,
+    bijouterie: 0,
+    polissage: 0,
+    dessertissage: 0,
+    design: 0,
   });
 
   const metaux = [
@@ -108,6 +119,10 @@ const PageCreerDevis = () => {
 
   const [images, setImages] = useState([]);
   const [mainImageId, setMainImageId] = useState(null);
+
+  // Modifiez ces constantes pour inclure plus d'options si nécessaire
+  const heuresOptions = Array.from({length: 25}, (_, i) => i); // 0h à 24h
+  const minutesOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
   useEffect(() => {
     console.log("Images actuelles:", images);
@@ -221,8 +236,19 @@ const PageCreerDevis = () => {
     fetchParametres();
   }, []);
 
+  // Modifiez la fonction handleInputChange pour gérer tous les champs de temps
   const handleInputChange = (field, value) => {
-    setDevis(prev => ({ ...prev, [field]: value }));
+    if (['tempsAdministratif', 'tempsCAO', 'tempsRepare', 'tempsPolissage', 'tempsDessertissage', 'tempsDesign'].includes(field)) {
+      setDevis(prev => ({
+        ...prev,
+        [field]: {
+          ...prev[field],
+          ...value
+        }
+      }));
+    } else {
+      setDevis(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleOptionsChange = (option, value) => {
@@ -442,6 +468,31 @@ const PageCreerDevis = () => {
     "4.45": 0.35,
     "4.5": 0.36,
     "4.55": 0.37
+  };
+
+  useEffect(() => {
+    const fetchTauxHoraires = async () => {
+      const docRef = doc(db, 'parametresDevis', 'default');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTauxHoraires({
+          administratif: data.tauxHoraireAdministratif || 0,
+          cao: data.tauxHoraireCAO || 0,
+          bijouterie: data.tauxHoraireBijouterie || 0,
+          polissage: data.tauxHoraireBijouterie || 0, // Utilise le même taux que bijouterie
+          dessertissage: data.tauxHoraireDesertissage || 0,
+          design: data.tauxHoraireDesign || 0,
+        });
+      }
+    };
+
+    fetchTauxHoraires();
+  }, []);
+
+  const calculerPrix = (temps, tauxHoraire) => {
+    const heures = temps.heures + temps.minutes / 60;
+    return heures * tauxHoraire;
   };
 
   return (
@@ -896,82 +947,150 @@ const PageCreerDevis = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block mb-2">Temps administratif</label>
           <div className="flex space-x-2">
-            <input
-              type="number"
+            <select
               value={devis.tempsAdministratif.heures}
-              onChange={(e) => handleInputChange('tempsAdministratif', { ...devis.tempsAdministratif, heures: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsAdministratif', { heures: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>h</span>
-            <input
-              type="number"
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
               value={devis.tempsAdministratif.minutes}
-              onChange={(e) => handleInputChange('tempsAdministratif', { ...devis.tempsAdministratif, minutes: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsAdministratif', { minutes: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>min</span>
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
           </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsAdministratif, tauxHoraires.administratif).toFixed(2)} €</p>
         </div>
         <div>
           <label className="block mb-2">Temps CAO</label>
           <div className="flex space-x-2">
-            <input
-              type="number"
+            <select
               value={devis.tempsCAO.heures}
-              onChange={(e) => handleInputChange('tempsCAO', { ...devis.tempsCAO, heures: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsCAO', { heures: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>h</span>
-            <input
-              type="number"
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
               value={devis.tempsCAO.minutes}
-              onChange={(e) => handleInputChange('tempsCAO', { ...devis.tempsCAO, minutes: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsCAO', { minutes: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>min</span>
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
           </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsCAO, tauxHoraires.cao).toFixed(2)} €</p>
         </div>
         <div>
-          <label className="block mb-2">Temps réparé</label>
+          <label className="block mb-2">Temps bijouterie</label>
           <div className="flex space-x-2">
-            <input
-              type="number"
+            <select
               value={devis.tempsRepare.heures}
-              onChange={(e) => handleInputChange('tempsRepare', { ...devis.tempsRepare, heures: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsRepare', { heures: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>h</span>
-            <input
-              type="number"
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
               value={devis.tempsRepare.minutes}
-              onChange={(e) => handleInputChange('tempsRepare', { ...devis.tempsRepare, minutes: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsRepare', { minutes: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>min</span>
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
           </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsRepare, tauxHoraires.bijouterie).toFixed(2)} €</p>
         </div>
         <div>
           <label className="block mb-2">Temps polissage</label>
           <div className="flex space-x-2">
-            <input
-              type="number"
+            <select
               value={devis.tempsPolissage.heures}
-              onChange={(e) => handleInputChange('tempsPolissage', { ...devis.tempsPolissage, heures: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsPolissage', { heures: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>h</span>
-            <input
-              type="number"
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
               value={devis.tempsPolissage.minutes}
-              onChange={(e) => handleInputChange('tempsPolissage', { ...devis.tempsPolissage, minutes: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('tempsPolissage', { minutes: parseInt(e.target.value) })}
               className={inputClass}
-            />
-            <span>min</span>
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
           </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsPolissage, tauxHoraires.bijouterie).toFixed(2)} €</p>
+        </div>
+        <div>
+          <label className="block mb-2">Temps de désertissage</label>
+          <div className="flex space-x-2">
+            <select
+              value={devis.tempsDessertissage.heures}
+              onChange={(e) => handleInputChange('tempsDessertissage', { heures: parseInt(e.target.value) })}
+              className={inputClass}
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
+              value={devis.tempsDessertissage.minutes}
+              onChange={(e) => handleInputChange('tempsDessertissage', { minutes: parseInt(e.target.value) })}
+              className={inputClass}
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsDessertissage, tauxHoraires.dessertissage).toFixed(2)} €</p>
+        </div>
+        <div>
+          <label className="block mb-2">Temps Design/Réflexion</label>
+          <div className="flex space-x-2">
+            <select
+              value={devis.tempsDesign.heures}
+              onChange={(e) => handleInputChange('tempsDesign', { heures: parseInt(e.target.value) })}
+              className={inputClass}
+            >
+              {heuresOptions.map(h => (
+                <option key={h} value={h}>{h}h</option>
+              ))}
+            </select>
+            <select
+              value={devis.tempsDesign.minutes}
+              onChange={(e) => handleInputChange('tempsDesign', { minutes: parseInt(e.target.value) })}
+              className={inputClass}
+            >
+              {minutesOptions.map(m => (
+                <option key={m} value={m}>{m}min</option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-2">Prix : {calculerPrix(devis.tempsDesign, tauxHoraires.design).toFixed(2)} €</p>
         </div>
       </div>
 
