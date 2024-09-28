@@ -9,6 +9,49 @@ import { storage } from '../firebase'; // Assurez-vous d'avoir configuré Fireba
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid'; // Ajoutez cette importation en haut du fichier
 
+const CustomSelect = ({ options, value, onChange, className, darkMode }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <div
+        className={`${className} cursor-pointer flex justify-between items-center ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{value || "Sélectionnez un métal"}</span>
+        {value && options.find(opt => opt.value === value)?.price && (
+          <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>
+            {options.find(opt => opt.value === value).price}€/g
+          </span>
+        )}
+      </div>
+      {isOpen && (
+        <div className={`absolute z-10 w-full mt-1 border rounded-md shadow-lg max-h-60 overflow-auto ${
+          darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
+        }`}>
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className={`px-4 py-2 cursor-pointer flex justify-between ${
+                darkMode 
+                  ? 'hover:bg-gray-700 text-white' 
+                  : 'hover:bg-gray-100 text-gray-800'
+              }`}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              <span>{option.label}</span>
+              {option.price && <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>{option.price}€/g</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PageCreerDevis = () => {
   const { darkMode } = useAppContext();
   const [clients, setClients] = useState([]);
@@ -61,7 +104,11 @@ const PageCreerDevis = () => {
       poinconTitre: {},
       marque: {}
     },
-    coefficientDiamantsRonds: 1.15
+    coefficientDiamantsRonds: 1.15,
+    prixFonte: {},
+    prixImpressionCire: {},
+    prixImpressionResine: {},
+    prixRhodiage: 0,
   });
 
   const [tauxHoraires, setTauxHoraires] = useState({
@@ -81,7 +128,8 @@ const PageCreerDevis = () => {
     "Or Gris Palladié",
     "Argent 925",
     "Or jaune 24K",
-    "Or jaune 2N"
+    "Or jaune 2N",
+    "Platine" // Ajout du platine à la liste
   ];
 
   const formesPierres = [
@@ -123,6 +171,10 @@ const PageCreerDevis = () => {
   // Modifiez ces constantes pour inclure plus d'options si nécessaire
   const heuresOptions = Array.from({length: 25}, (_, i) => i); // 0h à 24h
   const minutesOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  const [prixMetaux, setPrixMetaux] = useState({});
+
+  const [valeurMetal, setValeurMetal] = useState(0);
 
   useEffect(() => {
     console.log("Images actuelles:", images);
@@ -196,7 +248,7 @@ const PageCreerDevis = () => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setStylesGravure(Object.keys(data.prixGravure || {}));
+        setStylesGravure(data.prixGravure || {});
       }
     };
 
@@ -227,7 +279,11 @@ const PageCreerDevis = () => {
             poinconTitre: {},
             marque: {}
           },
-          coefficientDiamantsRonds: data.coefficientDiamantsRonds || 1.15
+          coefficientDiamantsRonds: data.coefficientDiamantsRonds || 1.15,
+          prixFonte: data.prixFonte || {},
+          prixImpressionCire: data.prixImpressionCire || {},
+          prixImpressionResine: data.prixImpressionResine || {},
+          prixRhodiage: data.prixRhodiage || 0,
         });
         setTypesSertissage(Object.keys(data.prixSertissage || {}));
       }
@@ -236,7 +292,31 @@ const PageCreerDevis = () => {
     fetchParametres();
   }, []);
 
-  // Modifiez la fonction handleInputChange pour gérer tous les champs de temps
+  useEffect(() => {
+    const fetchPrixMetaux = async () => {
+      const docRef = doc(db, 'parametresDevis', 'default');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setPrixMetaux(data.prixMetaux || {});
+      }
+    };
+
+    fetchPrixMetaux();
+  }, []);
+
+  useEffect(() => {
+    const poids = parseFloat(devis.poidsEstime) || 0;
+    const prixMetal = prixMetaux[devis.metal] ? prixMetaux[devis.metal] / 1000 : 0;
+    setValeurMetal((poids * prixMetal).toFixed(2));
+  }, [devis.poidsEstime, devis.metal, prixMetaux]);
+
+  const metalOptions = metaux.map(metal => ({
+    value: metal,
+    label: metal,
+    price: prixMetaux[metal] ? (prixMetaux[metal] / 1000).toFixed(2) : null
+  }));
+
   const handleInputChange = (field, value) => {
     if (['tempsAdministratif', 'tempsCAO', 'tempsRepare', 'tempsPolissage', 'tempsDessertissage', 'tempsDesign'].includes(field)) {
       setDevis(prev => ({
@@ -244,6 +324,32 @@ const PageCreerDevis = () => {
         [field]: {
           ...prev[field],
           ...value
+        }
+      }));
+    } else if (['tarifFonte', 'tarifImpressionCire', 'tarifImpressionResine'].includes(field)) {
+      const impressionType = field.replace('tarif', '').toLowerCase();
+      setDevis(prev => ({
+        ...prev,
+        [field]: value,
+        couts: {
+          ...prev.couts,
+          impression: {
+            ...prev.couts.impression,
+            [impressionType]: value === 'custom' ? 0 : parseFloat(value) || 0
+          }
+        }
+      }));
+    } else if (['tarifFonteCustom', 'tarifImpressionCireCustom', 'tarifImpressionResineCustom'].includes(field)) {
+      const impressionType = field.replace('tarifCustom', '').toLowerCase();
+      setDevis(prev => ({
+        ...prev,
+        [field]: value,
+        couts: {
+          ...prev.couts,
+          impression: {
+            ...prev.couts.impression,
+            [impressionType]: parseFloat(value) || 0
+          }
         }
       }));
     } else {
@@ -546,17 +652,14 @@ const PageCreerDevis = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-2">Métal</label>
-          <select
+          <label className="block mb-2 font-semibold">Métal</label>
+          <CustomSelect
+            options={metalOptions}
             value={devis.metal}
-            onChange={(e) => handleInputChange('metal', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Sélectionner un métal</option>
-            {metaux.map(metal => (
-              <option key={metal} value={metal}>{metal}</option>
-            ))}
-          </select>
+            onChange={(value) => handleInputChange('metal', value)}
+            className={`${inputClass} w-full`}
+            darkMode={darkMode}
+          />
         </div>
         <div>
           <label className="block mb-2">Titre du devis</label>
@@ -592,6 +695,15 @@ const PageCreerDevis = () => {
             placeholder="ex : 10.5"
           />
         </div>
+        <div>
+          <label className="block mb-2">Valeur métal estimée (€)</label>
+          <input
+            type="text"
+            value={valeurMetal}
+            readOnly
+            className={`${inputClass} w-full bg-gray-100`}
+          />
+        </div>
         <div className="col-span-2">
           <label className="block mb-2">Description</label>
           <textarea
@@ -603,88 +715,105 @@ const PageCreerDevis = () => {
         </div>
       </div>
 
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-4">Gravure et Finition</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2 font-semibold">Gravure</label>
+            <input
+              type="text"
+              value={devis.gravure}
+              onChange={(e) => handleInputChange('gravure', e.target.value)}
+              className={`${inputClass} w-full`}
+              placeholder="Texte à graver (optionnel)"
+            />
+          </div>
+          {devis.gravure && (
+            <div>
+              <label className="block mb-2 font-semibold">Style de gravure</label>
+              <select
+                value={devis.styleGravure}
+                onChange={(e) => handleInputChange('styleGravure', e.target.value)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="">Sélectionner un style</option>
+                {Object.entries(stylesGravure).map(([style, prix]) => (
+                  <option key={style} value={style}>{`${style} (${prix}€)`}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="block mb-2 font-semibold">Poinçon de maître</label>
+            <select
+              value={devis.options.poinconMaitre}
+              onChange={(e) => handleOptionsChange('poinconMaitre', e.target.value)}
+              className={`${inputClass} w-full`}
+            >
+              <option value="">Sélectionnez une option</option>
+              {Object.entries(parametres.prixPoincons.poinconMaitre).map(([type, prix]) => (
+                <option key={type} value={type}>
+                  {type === 'gravureLaser' ? 'Gravure laser' : type === 'frappe' ? 'Frappé' : type} - {prix}€
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold">Poinçon de titre</label>
+            <select
+              value={devis.options.poinconTitre}
+              onChange={(e) => handleOptionsChange('poinconTitre', e.target.value)}
+              className={`${inputClass} w-full`}
+            >
+              <option value="">Sélectionnez une option</option>
+              {Object.entries(parametres.prixPoincons.poinconTitre).map(([type, prix]) => (
+                <option key={type} value={type}>
+                  {type === 'gravureLaser' ? 'Gravure laser' : type === 'frappe' ? 'Frappé' : type} - {prix}€
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col">
+            <label className="font-semibold mb-2">Options de marque</label>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={devis.options.gravureLogoMarque}
+                  onChange={() => handleCheckboxChange('gravureLogoMarque')}
+                  className="form-checkbox h-5 w-5 text-teal-600"
+                />
+                <span>Gravure logo marque ({parametres.prixPoincons.marque.gravureLogoMarque}€)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={devis.options.gravureNumeroSerie}
+                  onChange={() => handleCheckboxChange('gravureNumeroSerie')}
+                  className="form-checkbox h-5 w-5 text-teal-600"
+                />
+                <span>Gravure N° série ({parametres.prixPoincons.marque.gravureNumeroSerie}€)</span>
+              </label>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <label className="font-semibold mb-2">Finition</label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={devis.options.rhodiage}
+                onChange={() => handleCheckboxChange('rhodiage')}
+                className="form-checkbox h-5 w-5 text-teal-600"
+              />
+              <span>Rhodiage ({parametres.prixRhodiage}€)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-4 mb-4">
-        <div>
-          <label className="block mb-2">Gravure</label>
-          <input
-            type="text"
-            value={devis.gravure}
-            onChange={(e) => handleInputChange('gravure', e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">Style de gravure</label>
-          <select
-            value={devis.styleGravure}
-            onChange={(e) => handleInputChange('styleGravure', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Sélectionner un style</option>
-            {stylesGravure.map(style => (
-              <option key={style} value={style}>{style}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block mb-2">Poinçon de maître</label>
-          <select
-            value={devis.options.poinconMaitre}
-            onChange={(e) => handleOptionsChange('poinconMaitre', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Sélectionner</option>
-            {Object.keys(parametres.prixPoincons.poinconMaitre).map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block mb-2">Poinçon de titre</label>
-          <select
-            value={devis.options.poinconTitre}
-            onChange={(e) => handleOptionsChange('poinconTitre', e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Sélectionner</option>
-            {Object.keys(parametres.prixPoincons.poinconTitre).map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={devis.options.gravureLogoMarque}
-              onChange={() => handleCheckboxChange('gravureLogoMarque')}
-              className="mr-2"
-            />
-            Gravure logo marque
-          </label>
-        </div>
-        <div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={devis.options.gravureNumeroSerie}
-              onChange={() => handleCheckboxChange('gravureNumeroSerie')}
-              className="mr-2"
-            />
-            Gravure N° série
-          </label>
-        </div>
-        <div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={devis.options.rhodiage}
-              onChange={() => handleCheckboxChange('rhodiage')}
-              className="mr-2"
-            />
-            Rhodiage
-          </label>
-        </div>
         <div>
           <label className="block mb-2">Commentaire interne</label>
           <textarea
@@ -1094,33 +1223,102 @@ const PageCreerDevis = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block mb-2">Tarif fonte</label>
-          <input
-            type="text"
-            value={devis.tarifFonte}
-            onChange={(e) => handleInputChange('tarifFonte', e.target.value)}
-            className={inputClass}
-          />
+          <div className="flex items-center space-x-2">
+            <select
+              value={devis.tarifFonte}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  handleInputChange('tarifFonte', 'custom');
+                } else {
+                  handleInputChange('tarifFonte', e.target.value);
+                }
+              }}
+              className={`${inputClass} flex-grow`}
+            >
+              <option value="">Sélectionnez un tarif</option>
+              {Object.entries(parametres.prixFonte).map(([poids, prix]) => (
+                <option key={poids} value={prix}>{`${poids} - ${prix}€`}</option>
+              ))}
+              <option value="custom">Tarif personnalisé</option>
+            </select>
+            {devis.tarifFonte === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifFonteCustom || ''}
+                onChange={(e) => handleInputChange('tarifFonteCustom', e.target.value)}
+                placeholder="Tarif libre"
+                className={`${inputClass} w-24`}
+                step="0.01"
+              />
+            )}
+          </div>
         </div>
         <div>
           <label className="block mb-2">Tarif impression cire</label>
-          <input
-            type="text"
-            value={devis.tarifImpressionCire}
-            onChange={(e) => handleInputChange('tarifImpressionCire', e.target.value)}
-            className={inputClass}
-          />
+          <div className="flex items-center space-x-2">
+            <select
+              value={devis.tarifImpressionCire}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  handleInputChange('tarifImpressionCire', 'custom');
+                } else {
+                  handleInputChange('tarifImpressionCire', e.target.value);
+                }
+              }}
+              className={`${inputClass} flex-grow`}
+            >
+              <option value="">Sélectionnez un tarif</option>
+              {Object.entries(parametres.prixImpressionCire).map(([taille, prix]) => (
+                <option key={taille} value={prix}>{`${taille} - ${prix}€`}</option>
+              ))}
+              <option value="custom">Tarif personnalisé</option>
+            </select>
+            {devis.tarifImpressionCire === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifImpressionCireCustom || ''}
+                onChange={(e) => handleInputChange('tarifImpressionCireCustom', e.target.value)}
+                placeholder="Tarif libre"
+                className={`${inputClass} w-24`}
+                step="0.01"
+              />
+            )}
+          </div>
         </div>
         <div>
           <label className="block mb-2">Tarif impression résine</label>
-          <input
-            type="text"
-            value={devis.tarifImpressionResine}
-            onChange={(e) => handleInputChange('tarifImpressionResine', e.target.value)}
-            className={inputClass}
-          />
+          <div className="flex items-center space-x-2">
+            <select
+              value={devis.tarifImpressionResine}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  handleInputChange('tarifImpressionResine', 'custom');
+                } else {
+                  handleInputChange('tarifImpressionResine', e.target.value);
+                }
+              }}
+              className={`${inputClass} flex-grow`}
+            >
+              <option value="">Sélectionnez un tarif</option>
+              {Object.entries(parametres.prixImpressionResine).map(([taille, prix]) => (
+                <option key={taille} value={prix}>{`${taille} - ${prix}€`}</option>
+              ))}
+              <option value="custom">Tarif personnalisé</option>
+            </select>
+            {devis.tarifImpressionResine === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifImpressionResineCustom || ''}
+                onChange={(e) => handleInputChange('tarifImpressionResineCustom', e.target.value)}
+                placeholder="Tarif libre"
+                className={`${inputClass} w-24`}
+                step="0.01"
+              />
+            )}
+          </div>
         </div>
       </div>
 

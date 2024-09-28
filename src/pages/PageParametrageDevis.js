@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tab } from '@headlessui/react';
-import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon, FingerPrintIcon, CubeIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon, PencilIcon, CubeIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -230,15 +230,11 @@ const PageParametrageDevis = () => {
     fetchParametres();
   }, [fetchParametres]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'coefficientDiamantsRonds') {
-      // Permettre à la fois le point et la virgule comme séparateur décimal
-      const sanitizedValue = value.replace(',', '.');
-      setParametres(prev => ({ ...prev, [name]: sanitizedValue }));
-    } else {
-      setParametres(prev => ({ ...prev, [name]: parseFloat(value) }));
-    }
+  const handleInputChange = (field, value) => {
+    setParametres(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleNestedInputChange = useCallback((category, key, value) => {
@@ -331,8 +327,8 @@ const PageParametrageDevis = () => {
               Autres
             </Tab>
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
-              <FingerPrintIcon className="w-5 h-5 mr-2 inline-block" />
-              Poinçons et Marques
+              <PencilIcon className="w-5 h-5 mr-2 inline-block" />
+              Gravures et Finitions
             </Tab>
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <CubeIcon className="w-5 h-5 mr-2 inline-block" />
@@ -572,6 +568,19 @@ const PageParametrageDevis = () => {
                         className={inputClass}
                       />
                     </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Rhodiage</h3>
+                  <div>
+                    <label className="block mb-1">Prix du rhodiage</label>
+                    <input
+                      type="number"
+                      value={parametres.prixRhodiage}
+                      onChange={(e) => handleInputChange('prixRhodiage', parseFloat(e.target.value))}
+                      className={inputClass}
+                      step="0.01"
+                    />
                   </div>
                 </div>
               </div>
