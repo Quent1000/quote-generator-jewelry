@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, ChatBubbleLeftRightIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { StarIcon } from '@heroicons/react/24/solid';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { formatPhoneNumber } from '../../utils/formatPhoneNumber';
+import linkedinIcon from '../../assets/icone-linkedin.png';
 
 const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
   const [entreprise, setEntreprise] = useState(null);
@@ -19,8 +21,6 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
     };
     fetchEntreprise();
   }, [client.entrepriseId]);
-
-  if (!entreprise) return null; // ou un composant de chargement
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -44,16 +44,18 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
             <PencilIcon className="h-6 w-6" />
           </button>
           <div className="flex items-center mb-6">
-            {entreprise.logo ? (
+            {entreprise && entreprise.logo ? (
               <img src={entreprise.logo} alt={`Logo ${entreprise.nom}`} className="w-20 h-20 rounded-full mr-6 object-cover" />
             ) : (
               <div className={`w-20 h-20 rounded-full mr-6 flex items-center justify-center text-3xl font-bold ${darkMode ? 'bg-gray-700' : 'bg-teal-100 text-teal-800'}`}>
-                {entreprise.nom.charAt(0)}
+                {client.informationsPersonnelles.prenom.charAt(0)}
               </div>
             )}
             <div>
               <h2 className="text-2xl font-bold">{client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}</h2>
-              <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{entreprise.nom}</p>
+              <p className={`text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {entreprise ? entreprise.nom : 'Particulier'}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-6">
@@ -72,10 +74,32 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
                   <EnvelopeIcon className="h-5 w-5 mr-2 text-teal-500" />
                   <span>{client.informationsPersonnelles.email}</span>
                 </li>
-                <li className="flex items-center">
-                  <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
-                  <span>{entreprise.siteWeb || 'Non renseigné'}</span>
-                </li>
+                {entreprise && entreprise.siteWeb && (
+                  <li className="flex items-center">
+                    <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
+                    <a 
+                      href={entreprise.siteWeb.startsWith('http') ? entreprise.siteWeb : `https://${entreprise.siteWeb}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      {entreprise.siteWeb}
+                    </a>
+                  </li>
+                )}
+                {client.informationsPersonnelles.linkedinUrl && (
+                  <li className="flex items-center">
+                    <img src={linkedinIcon} alt="LinkedIn" className="h-5 w-5 mr-2" />
+                    <a 
+                      href={client.informationsPersonnelles.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      Profil LinkedIn
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
             <div>
@@ -92,20 +116,20 @@ const ClientDetails = ({ client, onClose, darkMode, onEdit }) => {
               </ul>
             </div>
           </div>
+          {entreprise && entreprise.adresse && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Adresse</h3>
+              <p>{entreprise.adresse}</p>
+            </div>
+          )}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Adresse</h3>
-            <p>{entreprise.adresse}</p>
-          </div>
-          <div>
             <h3 className="text-lg font-semibold mb-2">Note client</h3>
             <div className="flex">
               {[1, 2, 3, 4, 5].map((star) => (
-                <span
+                <StarIcon
                   key={star}
-                  className={`text-2xl ${star <= client.relationClient.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                >
-                  ★
-                </span>
+                  className={`h-6 w-6 ${star <= client.relationClient.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                />
               ))}
             </div>
           </div>

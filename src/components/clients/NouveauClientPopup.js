@@ -4,30 +4,63 @@ import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import TagInput from '../common/TagInput';
+import useFormValidation from '../../hooks/useFormValidation';
+import FormInput from '../common/FormInput';
 
 const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
-  const [client, setClient] = useState({
-    informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
-    entrepriseId: '',
-    relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
-  });
-
-  const [entreprise, setEntreprise] = useState({
-    nom: '',
-    adresse: '',
-    siteWeb: '',
+  const [formData, setFormData] = useState({
+    client: {
+      informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
+      entrepriseId: '',
+      relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: ['Particulier'], rating: 0 },
+    },
+    entreprise: {
+      nom: '',
+      adresse: '',
+      siteWeb: '',
+    },
+    nouvelleEntreprise: false,
+    logoFile: null,
+    previewUrl: '',
   });
 
   const [entreprises, setEntreprises] = useState([]);
-  const [nouvelleEntreprise, setNouvelleEntreprise] = useState(false);
-  const [logoFile, setLogoFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [errors, setErrors] = useState({});
-  const [tags, setTags] = useState([]);
   const tagSuggestions = ['VIP', 'Fidèle', 'Nouveau', 'Professionnel', 'Particulier'];
-  const [rating, setRating] = useState(0);
+
+  const validationRules = {
+    'client.informationsPersonnelles.prenom': (value) => {
+      if (!value || !value.trim()) return "Le prénom est requis";
+      return null;
+    },
+    'client.informationsPersonnelles.nom': (value) => {
+      if (!value || !value.trim()) return "Le nom est requis";
+      return null;
+    },
+    'client.informationsPersonnelles.email': (value) => {
+      if (!value || !value.trim()) return "L'email est requis";
+      if (!/^\S+@\S+\.\S+$/.test(value)) return "Format d'email invalide";
+      return null;
+    },
+    'client.informationsPersonnelles.telephone': (value) => {
+      if (!value || !value.trim()) return "Le téléphone est requis";
+      if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(value)) return "Format de téléphone invalide";
+      return null;
+    },
+    'entreprise.nom': (value, data) => {
+      if (data.nouvelleEntreprise && (!value || !value.trim())) return "Le nom de l'entreprise est requis";
+      return null;
+    },
+    'entreprise.siteWeb': (value) => {
+      if (value && !isValidUrl(value)) {
+        return "Format d'URL invalide";
+      }
+      return null;
+    },
+  };
+
+  const { errors, validate } = useFormValidation({}, validationRules);
 
   useEffect(() => {
     const fetchEntreprises = async () => {
@@ -35,33 +68,86 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
       const entreprisesList = entreprisesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEntreprises(entreprisesList);
     };
-    fetchEntreprises();
-  }, []);
 
-  const handleChange = (e, section) => {
-    const { name, value } = e.target;
-    if (section === 'entreprise') {
-      setEntreprise(prev => ({ ...prev, [name]: value }));
-    } else {
-      setClient(prev => ({ ...prev, [section]: { ...prev[section], [name]: value } }));
+    if (isOpen) {
+      fetchEntreprises();
     }
+  }, [isOpen]);
+
+  const updateFormData = (section, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleChange = (e, section, subSection = null) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [section]: subSection
+        ? {
+            ...prev[section],
+            [subSection]: {
+              ...prev[section][subSection],
+              [name]: value
+            }
+          }
+        : {
+            ...prev[section],
+            [name]: value
+          }
+    }));
   };
 
   const handleEntrepriseChange = (e) => {
     const { value } = e.target;
-    if (value === 'nouvelle') {
-      setNouvelleEntreprise(true);
-      setClient(prev => ({ ...prev, entrepriseId: '' }));
+    if (value === '') {
+      // Si aucune entreprise n'est sélectionnée, considérer comme particulier
+      setFormData(prev => ({
+        ...prev,
+        nouvelleEntreprise: false,
+        client: {
+          ...prev.client,
+          entrepriseId: '',
+          relationClient: {
+            ...prev.client.relationClient,
+            tags: prev.client.relationClient.tags.includes('Particulier') ? prev.client.relationClient.tags : [...prev.client.relationClient.tags, 'Particulier']
+          }
+        }
+      }));
+    } else if (value === 'nouvelle') {
+      setFormData(prev => ({
+        ...prev,
+        nouvelleEntreprise: true,
+        client: {
+          ...prev.client,
+          entrepriseId: ''
+        }
+      }));
     } else {
-      setNouvelleEntreprise(false);
-      setClient(prev => ({ ...prev, entrepriseId: value }));
+      setFormData(prev => ({
+        ...prev,
+        nouvelleEntreprise: false,
+        client: {
+          ...prev.client,
+          entrepriseId: value,
+          relationClient: {
+            ...prev.client.relationClient,
+            tags: prev.client.relationClient.tags.filter(tag => tag !== 'Particulier')
+          }
+        }
+      }));
     }
   };
 
   const handleLogoChange = (e) => {
     if (e.target.files[0]) {
-      setLogoFile(e.target.files[0]);
-      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+      updateFormData('logoFile', e.target.files[0]);
+      updateFormData('previewUrl', URL.createObjectURL(e.target.files[0]));
     }
   };
 
@@ -70,21 +156,21 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
         const blob = items[i].getAsFile();
-        setLogoFile(blob);
-        setPreviewUrl(URL.createObjectURL(blob));
+        updateFormData('logoFile', blob);
+        updateFormData('previewUrl', URL.createObjectURL(blob));
         break;
       }
     }
   }, []);
 
   const uploadLogo = async () => {
-    if (logoFile) {
-      const fileExtension = logoFile.name.split('.').pop();
+    if (formData.logoFile) {
+      const fileExtension = formData.logoFile.name.split('.').pop();
       const fileName = `logos/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
       const logoRef = ref(storage, fileName);
       
       try {
-        const snapshot = await uploadBytes(logoRef, logoFile);
+        const snapshot = await uploadBytes(logoRef, formData.logoFile);
         const downloadURL = await getDownloadURL(snapshot.ref);
         console.log('Logo uploaded successfully:', downloadURL);
         return downloadURL;
@@ -105,58 +191,36 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
     return url;
   };
 
-  const isValidUrl = (url) => {
-    if (!url) return true; // URL optionnelle
-    const pattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
-    return pattern.test(url);
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!client.informationsPersonnelles.prenom.trim()) newErrors.prenom = "Le prénom est requis";
-    if (!client.informationsPersonnelles.nom.trim()) newErrors.nom = "Le nom est requis";
-    if (!client.informationsPersonnelles.email.trim()) newErrors.email = "L'email est requis";
-    if (!/^\S+@\S+\.\S+$/.test(client.informationsPersonnelles.email)) newErrors.email = "Format d'email invalide";
-    if (!client.informationsPersonnelles.telephone.trim()) newErrors.telephone = "Le téléphone est requis";
-    if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(client.informationsPersonnelles.telephone)) newErrors.telephone = "Format de téléphone invalide";
-    
-    if (nouvelleEntreprise) {
-      if (!entreprise.nom.trim()) newErrors.entrepriseNom = "Le nom de l'entreprise est requis";
-      if (entreprise.siteWeb && !isValidUrl(entreprise.siteWeb)) newErrors.siteWeb = "Format d'URL invalide";
-    } else if (!client.entrepriseId) {
-      newErrors.entrepriseId = "Veuillez sélectionner une entreprise";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    const isValid = validate(formData);
+    if (!isValid) {
+      console.log("Erreurs de validation:", errors);
+      return;
+    }
     setIsSubmitting(true);
     setUploadProgress(0);
     try {
-      let entrepriseId = client.entrepriseId;
+      let entrepriseId = formData.client.entrepriseId;
 
-      if (nouvelleEntreprise) {
+      if (formData.nouvelleEntreprise) {
         const logoUrl = await uploadLogo();
         const nouvelleEntrepriseDoc = await addDoc(collection(db, 'entreprises'), {
-          ...entreprise,
+          ...formData.entreprise,
           logo: logoUrl,
-          siteWeb: formatWebsite(entreprise.siteWeb)
+          siteWeb: formatWebsite(formData.entreprise.siteWeb)
         });
         entrepriseId = nouvelleEntrepriseDoc.id;
       }
 
       const clientToAdd = {
-        informationsPersonnelles: client.informationsPersonnelles,
+        informationsPersonnelles: formData.client.informationsPersonnelles,
         entrepriseId: entrepriseId,
         relationClient: { 
-          ...client.relationClient, 
-          dateCreation: new Date(client.relationClient.dateCreation).toISOString(),
-          tags: tags,
-          rating: rating
+          ...formData.client.relationClient, 
+          dateCreation: new Date(formData.client.relationClient.dateCreation).toISOString(),
+          tags: formData.client.relationClient.tags,
+          rating: formData.client.relationClient.rating
         }
       };
 
@@ -168,17 +232,17 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
       onClose();
       
       // Réinitialiser le formulaire
-      setClient({
-        informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
-        entrepriseId: '',
-        relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
+      setFormData({
+        client: {
+          informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
+          entrepriseId: '',
+          relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
+        },
+        entreprise: { nom: '', adresse: '', siteWeb: '' },
+        nouvelleEntreprise: false,
+        logoFile: null,
+        previewUrl: '',
       });
-      setEntreprise({ nom: '', adresse: '', siteWeb: '' });
-      setLogoFile(null);
-      setPreviewUrl('');
-      setNouvelleEntreprise(false);
-      setTags([]);
-      setRating(0);
     } catch (error) {
       console.error('Erreur lors de la création du client:', error);
     } finally {
@@ -192,6 +256,16 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
   const inputClass = `w-full p-2 border-b ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} focus:border-teal-500 focus:ring-0 transition-all duration-300`;
   const labelClass = 'block text-sm font-medium text-teal-600 dark:text-teal-400 mb-1';
   const buttonClass = 'px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-400 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50';
+
+  const isValidUrl = (url) => {
+    const pattern = new RegExp('^(https?://)?'+ // protocole
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // nom de domaine
+      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OU adresse IP (v4)
+      '(:\\d+)?(/[-a-z\\d%_.~+]*)*'+ // port et chemin
+      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // paramètres de requête
+      '(#[-a-z\\d_]*)?$','i'); // fragment
+    return pattern.test(url);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto">
@@ -207,86 +281,62 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
               Informations personnelles
             </h3>
             <div className="space-y-2">
-              <div>
-                <label className={labelClass} htmlFor="prenom">Prénom</label>
-                <input
-                  type="text"
-                  id="prenom"
-                  name="prenom"
-                  className={`${inputClass} ${errors.prenom ? 'border-red-500' : ''}`}
-                  value={client.informationsPersonnelles.prenom}
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')}
-                  required
-                  autoComplete="off"
-                />
-                {errors.prenom && <p className="text-red-500 text-xs italic">{errors.prenom}</p>}
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="nom">Nom</label>
-                <input 
-                  type="text" 
-                  id="nom" 
-                  name="nom" 
-                  className={`${inputClass} ${errors.nom ? 'border-red-500' : ''}`}
-                  value={client.informationsPersonnelles.nom} 
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
-                  required 
-                  autoComplete="off"
-                />
-                {errors.nom && <p className="text-red-500 text-xs italic">{errors.nom}</p>}
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="email">Email</label>
-                <input 
-                  type="email" 
-                  id="email" 
-                  name="email" 
-                  className={`${inputClass} ${errors.email ? 'border-red-500' : ''}`}
-                  value={client.informationsPersonnelles.email} 
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
-                  required 
-                  autoComplete="off"
-                />
-                {errors.email && <p className="text-red-500 text-xs italic">{errors.email}</p>}
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="telephone">Téléphone</label>
-                <input 
-                  type="text" 
-                  id="telephone" 
-                  name="telephone" 
-                  className={`${inputClass} ${errors.telephone ? 'border-red-500' : ''}`}
-                  value={client.informationsPersonnelles.telephone} 
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
-                  required 
-                  autoComplete="off"
-                />
-                {errors.telephone && <p className="text-red-500 text-xs italic">{errors.telephone}</p>}
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="telFixe">Téléphone fixe</label>
-                <input 
-                  type="text" 
-                  id="telFixe" 
-                  name="telFixe" 
-                  className={inputClass}
-                  value={client.informationsPersonnelles.telFixe} 
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="linkedinUrl">Profil LinkedIn</label>
-                <input 
-                  type="url" 
-                  id="linkedinUrl" 
-                  name="linkedinUrl" 
-                  className={inputClass}
-                  value={client.informationsPersonnelles.linkedinUrl} 
-                  onChange={(e) => handleChange(e, 'informationsPersonnelles')} 
-                  placeholder="https://www.linkedin.com/in/username"
-                />
-              </div>
+              <FormInput
+                label="Prénom"
+                name="prenom"
+                value={formData.client.informationsPersonnelles.prenom}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.prenom']}
+                darkMode={darkMode}
+                required
+              />
+              <FormInput
+                label="Nom"
+                name="nom"
+                value={formData.client.informationsPersonnelles.nom}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.nom']}
+                darkMode={darkMode}
+                required
+              />
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.client.informationsPersonnelles.email}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.email']}
+                darkMode={darkMode}
+                required
+              />
+              <FormInput
+                label="Téléphone"
+                name="telephone"
+                type="tel"
+                value={formData.client.informationsPersonnelles.telephone}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.telephone']}
+                darkMode={darkMode}
+                required
+              />
+              <FormInput
+                label="Téléphone fixe"
+                name="telFixe"
+                type="tel"
+                value={formData.client.informationsPersonnelles.telFixe}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.telFixe']}
+                darkMode={darkMode}
+              />
+              <FormInput
+                label="LinkedIn URL"
+                name="linkedinUrl"
+                type="url"
+                value={formData.client.informationsPersonnelles.linkedinUrl}
+                onChange={(e) => handleChange(e, 'client', 'informationsPersonnelles')}
+                error={errors['client.informationsPersonnelles.linkedinUrl']}
+                darkMode={darkMode}
+              />
             </div>
           </div>
 
@@ -302,53 +352,45 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                   id="entreprise"
                   name="entreprise"
                   className={inputClass}
-                  value={nouvelleEntreprise ? 'nouvelle' : client.entrepriseId}
+                  value={formData.nouvelleEntreprise ? 'nouvelle' : formData.client.entrepriseId}
                   onChange={handleEntrepriseChange}
                 >
-                  <option value="">Sélectionner une entreprise</option>
+                  <option value="">Particulier</option>
                   {entreprises.map((ent) => (
                     <option key={ent.id} value={ent.id}>{ent.nom}</option>
                   ))}
                   <option value="nouvelle">Ajouter une nouvelle entreprise</option>
                 </select>
-                {errors.entrepriseId && <p className="text-red-500 text-xs italic">{errors.entrepriseId}</p>}
+                {errors['client.entrepriseId'] && <p className="text-red-500 text-xs italic">{errors['client.entrepriseId']}</p>}
               </div>
-              {nouvelleEntreprise && (
+              {formData.nouvelleEntreprise && (
                 <>
-                  <div>
-                    <label className={labelClass} htmlFor="nomEntreprise">Nom de l'entreprise</label>
-                    <input
-                      type="text"
-                      id="nomEntreprise"
-                      name="nom"
-                      className={inputClass}
-                      value={entreprise.nom}
-                      onChange={(e) => handleChange(e, 'entreprise')}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass} htmlFor="adresse">Adresse</label>
-                    <input
-                      type="text"
-                      id="adresse"
-                      name="adresse"
-                      className={inputClass}
-                      value={entreprise.adresse}
-                      onChange={(e) => handleChange(e, 'entreprise')}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass} htmlFor="siteWeb">Site web</label>
-                    <input
-                      type="url"
-                      id="siteWeb"
-                      name="siteWeb"
-                      className={inputClass}
-                      value={entreprise.siteWeb}
-                      onChange={(e) => handleChange(e, 'entreprise')}
-                    />
-                  </div>
+                  <FormInput
+                    label="Nom de l'entreprise"
+                    name="nom"
+                    value={formData.entreprise.nom}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.nom']}
+                    darkMode={darkMode}
+                    required
+                  />
+                  <FormInput
+                    label="Adresse"
+                    name="adresse"
+                    value={formData.entreprise.adresse}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.adresse']}
+                    darkMode={darkMode}
+                  />
+                  <FormInput
+                    label="Site web"
+                    name="siteWeb"
+                    type="url"
+                    value={formData.entreprise.siteWeb}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.siteWeb']}
+                    darkMode={darkMode}
+                  />
                   <div>
                     <label className={labelClass} htmlFor="logo">Logo de l'entreprise</label>
                     <div 
@@ -358,8 +400,8 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                     >
                       <label htmlFor="logo" className="flex flex-col items-center justify-center w-full h-32 border-2 border-teal-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {previewUrl ? (
-                            <img src={previewUrl} alt="Logo preview" className="w-20 h-20 object-cover rounded-lg" />
+                          {formData.previewUrl ? (
+                            <img src={formData.previewUrl} alt="Logo preview" className="w-20 h-20 object-cover rounded-lg" />
                           ) : (
                             <>
                               <CloudArrowUpIcon className="w-10 h-10 mb-3 text-teal-500" />
@@ -383,22 +425,40 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
               Relation client
             </h3>
             <div className="space-y-2">
-              <div>
-                <label className={labelClass} htmlFor="dateCreation">Date de création</label>
-                <input type="date" id="dateCreation" name="dateCreation" className={inputClass} value={client.relationClient.dateCreation} onChange={(e) => handleChange(e, 'relationClient')} />
-              </div>
+              <FormInput
+                label="Date de création"
+                name="dateCreation"
+                type="date"
+                value={formData.client.relationClient.dateCreation}
+                onChange={(e) => handleChange(e, 'client', 'relationClient')}
+                error={errors['client.relationClient.dateCreation']}
+                darkMode={darkMode}
+              />
               <div>
                 <label className={labelClass} htmlFor="commentaireInterne">Commentaire interne</label>
-                <textarea id="commentaireInterne" name="commentaireInterne" className={`${inputClass} h-24 resize-none`} value={client.relationClient.commentaireInterne} onChange={(e) => handleChange(e, 'relationClient')}></textarea>
+                <textarea
+                  id="commentaireInterne"
+                  name="commentaireInterne"
+                  value={formData.client.relationClient.commentaireInterne}
+                  onChange={(e) => handleChange(e, 'client', 'relationClient')}
+                  className={`${inputClass} h-24`}
+                ></textarea>
               </div>
-              <div>
-                <label className={labelClass} htmlFor="tags">Tags</label>
-                <TagInput
-                  tags={tags}
-                  setTags={setTags}
-                  suggestions={tagSuggestions}
-                />
-              </div>
+              <TagInput
+                tags={formData.client.relationClient.tags}
+                setTags={(newTags) => setFormData(prev => ({
+                  ...prev,
+                  client: {
+                    ...prev.client,
+                    relationClient: {
+                      ...prev.client.relationClient,
+                      tags: newTags
+                    }
+                  }
+                }))}
+                suggestions={tagSuggestions}
+                darkMode={darkMode}
+              />
               <div>
                 <label className={labelClass}>Note client</label>
                 <div className="flex">
@@ -406,8 +466,8 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                     <button
                       key={star}
                       type="button"
-                      className={`text-2xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                      onClick={() => setRating(star)}
+                      className={`text-2xl ${star <= formData.client.relationClient.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                      onClick={() => updateFormData('client.relationClient', 'rating', star)}
                     >
                       ★
                     </button>
@@ -417,11 +477,10 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
             </div>
           </div>
 
-          <div className="col-span-3 flex justify-end space-x-4 mt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 text-gray-800 rounded-full hover:bg-gray-400 transition-colors duration-300">Annuler</button>
-            <button 
-              type="submit" 
-              className={`${buttonClass} ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          <div className="col-span-3">
+            <button
+              type="submit"
+              className={`w-full ${buttonClass}`}
               disabled={isSubmitting}
             >
               {isSubmitting ? (

@@ -41,7 +41,9 @@ const useClients = () => {
         client.informationsPersonnelles.email.toLowerCase().includes(searchTerm.toLowerCase());
 
       const entreprise = entreprises[client.entrepriseId];
-      const entrepriseMatch = entreprise && entreprise.nom.toLowerCase().includes(searchTerm.toLowerCase());
+      const entrepriseMatch = entreprise 
+        ? entreprise.nom.toLowerCase().includes(searchTerm.toLowerCase())
+        : 'particulier'.includes(searchTerm.toLowerCase());
 
       return clientMatch || entrepriseMatch;
     });

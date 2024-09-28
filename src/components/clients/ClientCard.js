@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { PhoneIcon, EnvelopeIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
-import { useAppContext } from '../../context/AppContext';
+import { PhoneIcon, EnvelopeIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { StarIcon } from '@heroicons/react/24/solid';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { formatPhoneNumber } from '../../utils/formatPhoneNumber';
 
-const ClientCard = ({ client, onClick }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const { darkMode } = useAppContext();
+const ClientCard = ({ client, darkMode, onClick }) => {
   const [entreprise, setEntreprise] = useState(null);
 
   useEffect(() => {
@@ -22,84 +20,56 @@ const ClientCard = ({ client, onClick }) => {
     fetchEntreprise();
   }, [client.entrepriseId]);
 
-  const getInitials = () => {
-    const prenom = client.informationsPersonnelles?.prenom || '';
-    const nom = client.informationsPersonnelles?.nom || '';
-    return (prenom.charAt(0) + nom.charAt(0)).toUpperCase();
-  };
-
-  if (!client || !client.informationsPersonnelles) {
-    return null;
-  }
+  const cardClass = `p-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer ${
+    darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-50'
+  }`;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
-    >
-      <div className="px-6 py-4">
-        <div className="flex items-center mb-2">
-          {entreprise && entreprise.logo ? (
-            <img 
-              src={entreprise.logo} 
-              alt={`Logo ${entreprise.nom}`} 
-              className="w-12 h-12 rounded-full object-cover mr-4"
-            />
-          ) : (
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mr-4 ${
-              darkMode ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-800'
-            }`}>
-              {getInitials()}
-            </div>
-          )}
-          <div>
-            <h3 className="text-lg font-semibold">
-              {client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{entreprise?.nom || 'Chargement...'}</p>
+    <div className={cardClass} onClick={onClick}>
+      <div className="flex items-center mb-2">
+        {entreprise && entreprise.logo ? (
+          <img src={entreprise.logo} alt={`Logo ${entreprise.nom}`} className="w-12 h-12 rounded-full mr-4 object-cover" />
+        ) : (
+          <div className={`w-12 h-12 rounded-full mr-4 flex items-center justify-center text-xl font-bold ${darkMode ? 'bg-gray-700' : 'bg-teal-100 text-teal-800'}`}>
+            {client.informationsPersonnelles.prenom.charAt(0)}
           </div>
-        </div>
-        <div className="mt-4 space-y-2 min-h-[96px]"> {/* Ajout d'une hauteur minimale */}
-          {client.informationsPersonnelles.email && (
-            <p className="flex items-center text-sm">
-              <EnvelopeIcon className="h-5 w-5 mr-2 text-teal-500" />
-              {client.informationsPersonnelles.email}
-            </p>
-          )}
-          {client.informationsPersonnelles.telephone && (
-            <p className="flex items-center text-sm">
-              <PhoneIcon className="h-5 w-5 mr-2 text-teal-500" />
-              {formatPhoneNumber(client.informationsPersonnelles.telephone)}
-            </p>
-          )}
-          {entreprise?.siteWeb && (
-            <p className="flex items-center text-sm">
-              <GlobeAltIcon className="h-5 w-5 mr-2 text-teal-500" />
-              {entreprise.siteWeb}
-            </p>
-          )}
+        )}
+        <div>
+          <h3 className="text-lg font-semibold">{client.informationsPersonnelles.prenom} {client.informationsPersonnelles.nom}</h3>
+          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            {client.entrepriseId ? (entreprise ? entreprise.nom : "Chargement...") : "Particulier"}
+          </p>
         </div>
       </div>
-      
-      <div className={`px-5 py-3 mt-2 text-xs font-medium uppercase tracking-wider transition-all duration-300 ease-in-out ${
-        darkMode ? 'bg-gray-700' : 'bg-gray-100'
-      } ${
-        isHovered ? 'bg-opacity-90' : ''
-      }`}>
-        Client depuis : {new Date(client.relationClient?.dateCreation || Date.now()).toLocaleDateString()}
+      <div className="space-y-1">
+        <p className="flex items-center text-sm">
+          <PhoneIcon className="h-4 w-4 mr-2 text-teal-500" />
+          {formatPhoneNumber(client.informationsPersonnelles.telephone)}
+        </p>
+        <p className="flex items-center text-sm">
+          <EnvelopeIcon className="h-4 w-4 mr-2 text-teal-500" />
+          {client.informationsPersonnelles.email}
+        </p>
+        {entreprise && entreprise.adresse && (
+          <p className="flex items-center text-sm">
+            <BuildingOfficeIcon className="h-4 w-4 mr-2 text-teal-500" />
+            {entreprise.adresse}
+          </p>
+        )}
       </div>
-      
-      {isHovered && (
-        <div className={`absolute bottom-0 left-0 right-0 p-3 text-xs bg-teal-500 text-white transform transition-transform duration-300 ease-in-out ${
-          isHovered ? 'translate-y-0' : 'translate-y-full'
-        }`}>
-          {client.relationClient?.commentaireInterne || 'Aucun commentaire'}
+      <div className="mt-2 flex justify-between items-center">
+        <div className="flex">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <StarIcon
+              key={star}
+              className={`h-4 w-4 ${star <= client.relationClient.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+            />
+          ))}
         </div>
-      )}
+        <p className="text-xs text-gray-500">
+          Client depuis : {new Date(client.relationClient.dateCreation).toLocaleDateString()}
+        </p>
+      </div>
     </div>
   );
 };

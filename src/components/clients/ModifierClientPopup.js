@@ -4,6 +4,7 @@ import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import TagInput from '../common/TagInput';
+import useFormValidation from '../../hooks/useFormValidation';
 
 const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdated }) => {
   const [clientData, setClientData] = useState({
@@ -22,11 +23,40 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
   const [logoFile, setLogoFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
   const [tags, setTags] = useState([]);
   const tagSuggestions = ['VIP', 'Fidèle', 'Nouveau', 'Professionnel', 'Particulier'];
   const [rating, setRating] = useState(0);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  const validationRules = {
+    'informationsPersonnelles.prenom': (value) => {
+      if (!value || !value.trim()) return "Le prénom est requis";
+      return null;
+    },
+    'informationsPersonnelles.nom': (value) => {
+      if (!value || !value.trim()) return "Le nom est requis";
+      return null;
+    },
+    'informationsPersonnelles.email': (value) => {
+      if (!value || !value.trim()) return "L'email est requis";
+      if (!/^\S+@\S+\.\S+$/.test(value)) return "Format d'email invalide";
+      return null;
+    },
+    'informationsPersonnelles.telephone': (value) => {
+      if (!value || !value.trim()) return "Le téléphone est requis";
+      if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(value)) return "Format de téléphone invalide";
+      return null;
+    },
+    'entreprise.siteWeb': (value) => {
+      if (value && !isValidUrl(value)) {
+        return "Format d'URL invalide";
+      }
+      return null;
+    },
+    // Ajoutez d'autres règles de validation si nécessaire
+  };
+
+  const { errors, validate } = useFormValidation({}, validationRules);
 
   useEffect(() => {
     if (client) {
@@ -103,54 +133,38 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     return url;
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!clientData.informationsPersonnelles.prenom.trim()) newErrors.prenom = "Le prénom est requis";
-    if (!clientData.informationsPersonnelles.nom.trim()) newErrors.nom = "Le nom est requis";
-    if (!clientData.informationsPersonnelles.email.trim()) newErrors.email = "L'email est requis";
-    if (!/^\S+@\S+\.\S+$/.test(clientData.informationsPersonnelles.email)) newErrors.email = "Format d'email invalide";
-    if (!clientData.informationsPersonnelles.telephone.trim()) newErrors.telephone = "Le téléphone est requis";
-    if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(clientData.informationsPersonnelles.telephone)) newErrors.telephone = "Format de téléphone invalide";
-    
-    if (entreprise.nom && !entreprise.nom.trim()) newErrors.entrepriseNom = "Le nom de l'entreprise est requis";
-    if (entreprise.siteWeb && !isValidUrl(entreprise.siteWeb)) newErrors.siteWeb = "Format d'URL invalide";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (validate({ ...clientData, entreprise })) {
+      setIsSubmitting(true);
 
-    setIsSubmitting(true);
-
-    try {
-      const logoUrl = await uploadLogo();
-      
-      const updatedClient = {
-        ...clientData,
-        relationClient: { ...clientData.relationClient, tags, rating }
-      };
-
-      await updateDoc(doc(db, 'clients', clientData.id), updatedClient);
-
-      if (entreprise && clientData.entrepriseId) {
-        const updatedEntreprise = {
-          ...entreprise,
-          logo: logoUrl,
-          siteWeb: formatWebsite(entreprise.siteWeb)
+      try {
+        const logoUrl = await uploadLogo();
+        
+        const updatedClient = {
+          ...clientData,
+          relationClient: { ...clientData.relationClient, tags, rating }
         };
-        await updateDoc(doc(db, 'entreprises', clientData.entrepriseId), updatedEntreprise);
-      }
 
-      onClientUpdated(updatedClient);
-      onClose();
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du client :", error);
-      alert("Une erreur s'est produite lors de la mise à jour du client.");
-    } finally {
-      setIsSubmitting(false);
+        await updateDoc(doc(db, 'clients', clientData.id), updatedClient);
+
+        if (entreprise && clientData.entrepriseId) {
+          const updatedEntreprise = {
+            ...entreprise,
+            logo: logoUrl,
+            siteWeb: formatWebsite(entreprise.siteWeb)
+          };
+          await updateDoc(doc(db, 'entreprises', clientData.entrepriseId), updatedEntreprise);
+        }
+
+        onClientUpdated(updatedClient);
+        onClose();
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du client :", error);
+        alert("Une erreur s'est produite lors de la mise à jour du client.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
