@@ -74,13 +74,37 @@ const useClients = () => {
 
   const updateClient = async (updatedClient) => {
     try {
+      if (!updatedClient || !updatedClient.id) {
+        console.error("Client invalide ou ID manquant");
+        return;
+      }
+
       const clientRef = doc(db, 'clients', updatedClient.id);
-      await updateDoc(clientRef, updatedClient);
+      await updateDoc(clientRef, {
+        informationsPersonnelles: updatedClient.informationsPersonnelles,
+        entrepriseId: updatedClient.entrepriseId,
+        relationClient: updatedClient.relationClient
+      });
+
+      // Mise à jour de l'entreprise si nécessaire
+      if (updatedClient.entreprise && updatedClient.entreprise.id) {
+        const entrepriseRef = doc(db, 'entreprises', updatedClient.entreprise.id);
+        await updateDoc(entrepriseRef, updatedClient.entreprise);
+      }
+
       const updatedClients = allClients.map(client =>
         client.id === updatedClient.id ? updatedClient : client
       );
       setAllClients(updatedClients);
       setClients(updatedClients);
+
+      // Mise à jour de l'état des entreprises
+      if (updatedClient.entreprise && updatedClient.entreprise.id) {
+        setEntreprises(prev => ({
+          ...prev,
+          [updatedClient.entreprise.id]: updatedClient.entreprise
+        }));
+      }
     } catch (error) {
       console.error("Erreur lors de la mise à jour du client:", error);
       throw error;

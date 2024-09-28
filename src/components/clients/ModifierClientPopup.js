@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { XMarkIcon, UserCircleIcon, BuildingOfficeIcon, TagIcon, CloudArrowUpIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import TagInput from '../common/TagInput';
 import useFormValidation from '../../hooks/useFormValidation';
+import { formatPhoneNumber } from '../../utils/formatPhoneNumber';
 
 const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdated }) => {
   const [clientData, setClientData] = useState({
@@ -12,6 +13,7 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     entrepriseId: '',
     relationClient: { dateCreation: '', commentaireInterne: '', tags: [], rating: 0 },
   });
+
 
   const [entreprise, setEntreprise] = useState({
     nom: '',
@@ -27,6 +29,19 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
   const tagSuggestions = ['VIP', 'Fidèle', 'Nouveau', 'Professionnel', 'Particulier'];
   const [rating, setRating] = useState(0);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const [entreprises, setEntreprises] = useState([]);
+  const [selectedEntrepriseId, setSelectedEntrepriseId] = useState('');
+
+  const isValidUrl = (url) => {
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
 
   const validationRules = {
     'informationsPersonnelles.prenom': (value) => {
@@ -44,7 +59,14 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     },
     'informationsPersonnelles.telephone': (value) => {
       if (!value || !value.trim()) return "Le téléphone est requis";
-      if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(value)) return "Format de téléphone invalide";
+      const cleanedNumber = value.replace(/\s/g, '');
+      if (!/^(\+33|0)[1-9]\d{8}$/.test(cleanedNumber)) {
+        return "Format de téléphone invalide";
+      }
+      return null;
+    },
+    'entreprise.nom': (value) => {
+      if (selectedEntrepriseId && (!value || !value.trim())) return "Le nom de l'entreprise est requis";
       return null;
     },
     'entreprise.siteWeb': (value) => {
@@ -59,38 +81,92 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
   const { errors, validate } = useFormValidation({}, validationRules);
 
   useEffect(() => {
+    const fetchEntreprises = async () => {
+      const entreprisesSnapshot = await getDocs(collection(db, 'entreprises'));
+      const entreprisesList = entreprisesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setEntreprises(entreprisesList);
+    };
+
+    fetchEntreprises();
+  }, []);
+
+  useEffect(() => {
     if (client) {
       setClientData(client);
       setTags(client.relationClient.tags || []);
       setRating(client.relationClient.rating || 0);
+      setSelectedEntrepriseId(client.entrepriseId || '');
       if (client.entrepriseId) {
-        // Charger les données de l'entreprise
         const fetchEntreprise = async () => {
           const entrepriseDoc = await getDoc(doc(db, 'entreprises', client.entrepriseId));
           if (entrepriseDoc.exists()) {
-            setEntreprise(entrepriseDoc.data());
-            setPreviewUrl(entrepriseDoc.data().logo || '');
+            const entrepriseData = entrepriseDoc.data();
+            setEntreprise(entrepriseData);
+            setPreviewUrl(entrepriseData.logo || '');
           }
         };
         fetchEntreprise();
+      } else {
+        // Réinitialiser le logo si le client n'a pas d'entreprise
+        setPreviewUrl('');
+        setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '' });
       }
     }
   }, [client]);
 
   const handleChange = (e, section) => {
     const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === 'telephone') {
+      formattedValue = formatPhoneNumber(value);
+    }
+
     if (section === 'entreprise') {
-      setEntreprise(prev => ({ ...prev, [name]: value }));
+      setEntreprise(prev => ({ ...prev, [name]: formattedValue }));
     } else {
-      setClientData(prev => ({ ...prev, [section]: { ...prev[section], [name]: value } }));
+      setClientData(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [name]: formattedValue
+        }
+      }));
     }
   };
 
   const handleLogoChange = (e) => {
-    if (e.target.files[0]) {
-      setLogoFile(e.target.files[0]);
-      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+    const file = e.target.files[0];
+    if (file) {
+      setLogoFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
+  };
+
+  const handleLogoDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setLogoFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleLogoDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleLogoDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleLogoDelete = () => {
+    setLogoFile(null);
+    setPreviewUrl('');
+    setEntreprise(prev => ({ ...prev, logo: '' }));
   };
 
   const handleLogoPaste = useCallback((e) => {
@@ -133,38 +209,81 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     return url;
   };
 
+  const handleEntrepriseChange = async (e) => {
+    const newEntrepriseId = e.target.value;
+    setSelectedEntrepriseId(newEntrepriseId);
+    
+    if (newEntrepriseId === '') {
+      // Si aucune entreprise n'est sélectionnée, considérer comme particulier
+      setClientData(prev => ({
+        ...prev,
+        entrepriseId: '',
+        relationClient: {
+          ...prev.relationClient,
+          tags: prev.relationClient.tags.includes('Particulier') ? prev.relationClient.tags : [...prev.relationClient.tags, 'Particulier']
+        }
+      }));
+      setEntreprise({ nom: '', adresse: '', siteWeb: '', logo: '' });
+      setPreviewUrl('');
+    } else {
+      // Charger les données de la nouvelle entreprise sélectionnée
+      const entrepriseDoc = await getDoc(doc(db, 'entreprises', newEntrepriseId));
+      if (entrepriseDoc.exists()) {
+        const entrepriseData = entrepriseDoc.data();
+        setEntreprise(entrepriseData);
+        setPreviewUrl(entrepriseData.logo || '');
+        setClientData(prev => ({
+          ...prev,
+          entrepriseId: newEntrepriseId,
+          relationClient: {
+            ...prev.relationClient,
+            tags: prev.relationClient.tags.filter(tag => tag !== 'Particulier')
+          }
+        }));
+      }
+    }
+  };
+
+  const handleEntrepriseFieldChange = (e) => {
+    const { name, value } = e.target;
+    setEntreprise(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate({ ...clientData, entreprise })) {
-      setIsSubmitting(true);
+    if (!validate({ ...clientData, entreprise })) return;
 
-      try {
-        const logoUrl = await uploadLogo();
-        
-        const updatedClient = {
-          ...clientData,
-          relationClient: { ...clientData.relationClient, tags, rating }
-        };
+    setIsSubmitting(true);
 
-        await updateDoc(doc(db, 'clients', clientData.id), updatedClient);
-
-        if (entreprise && clientData.entrepriseId) {
-          const updatedEntreprise = {
-            ...entreprise,
-            logo: logoUrl,
-            siteWeb: formatWebsite(entreprise.siteWeb)
-          };
-          await updateDoc(doc(db, 'entreprises', clientData.entrepriseId), updatedEntreprise);
-        }
-
-        onClientUpdated(updatedClient);
-        onClose();
-      } catch (error) {
-        console.error("Erreur lors de la mise à jour du client :", error);
-        alert("Une erreur s'est produite lors de la mise à jour du client.");
-      } finally {
-        setIsSubmitting(false);
+    try {
+      let logoUrl = entreprise.logo;
+      if (logoFile) {
+        logoUrl = await uploadLogo();
       }
+
+      const updatedClient = {
+        ...clientData,
+        entrepriseId: selectedEntrepriseId,
+        relationClient: { ...clientData.relationClient, tags, rating }
+      };
+
+      await updateDoc(doc(db, 'clients', clientData.id), updatedClient);
+
+      if (selectedEntrepriseId) {
+        const updatedEntreprise = {
+          ...entreprise,
+          logo: logoUrl,
+          siteWeb: formatWebsite(entreprise.siteWeb)
+        };
+        await updateDoc(doc(db, 'entreprises', selectedEntrepriseId), updatedEntreprise);
+      }
+
+      onClientUpdated({ ...updatedClient, entreprise: { ...entreprise, id: selectedEntrepriseId } });
+      onClose();
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du client:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -182,12 +301,6 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
     } finally {
       setShowDeleteConfirmation(false);
     }
-  };
-
-  const isValidUrl = (url) => {
-    if (!url) return true; // URL optionnelle
-    const pattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
-    return pattern.test(url);
   };
 
   const bgClass = darkMode ? 'bg-gray-800' : 'bg-white';
@@ -294,56 +407,86 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
               Entreprise
             </h3>
             <div className="space-y-2">
-              <div>
-                <label className={labelClass} htmlFor="nomEntreprise">Nom de l'entreprise</label>
-                <input
-                  type="text"
-                  id="nomEntreprise"
-                  name="nom"
-                  className={inputClass}
-                  value={entreprise.nom}
-                  onChange={(e) => handleChange(e, 'entreprise')}
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="adresse">Adresse</label>
-                <input
-                  type="text"
-                  id="adresse"
-                  name="adresse"
-                  className={inputClass}
-                  value={entreprise.adresse}
-                  onChange={(e) => handleChange(e, 'entreprise')}
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="siteWeb">Site web</label>
-                <input
-                  type="url"
-                  id="siteWeb"
-                  name="siteWeb"
-                  className={inputClass}
-                  value={entreprise.siteWeb}
-                  onChange={(e) => handleChange(e, 'entreprise')}
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="logo">Logo de l'entreprise</label>
-                <div 
-                  className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer"
-                  onPaste={handleLogoPaste}
-                >
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="Logo preview" className="w-full h-full object-contain" />
-                  ) : (
-                    <div className="text-center">
-                      <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-                      <p className="mt-1 text-sm text-gray-500">Cliquez ou collez pour ajouter un logo</p>
+              <select
+                value={selectedEntrepriseId}
+                onChange={handleEntrepriseChange}
+                className={`${inputClass} w-full`}
+              >
+                <option value="">Particulier</option>
+                {entreprises.map(ent => (
+                  <option key={ent.id} value={ent.id}>{ent.nom}</option>
+                ))}
+              </select>
+              {selectedEntrepriseId && (
+                <>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={entreprise.nom}
+                    onChange={handleEntrepriseFieldChange}
+                    className={inputClass}
+                    placeholder="Nom de l'entreprise"
+                  />
+                  <input
+                    type="text"
+                    name="adresse"
+                    value={entreprise.adresse}
+                    onChange={handleEntrepriseFieldChange}
+                    className={inputClass}
+                    placeholder="Adresse de l'entreprise"
+                  />
+                  <input
+                    type="text"
+                    name="siteWeb"
+                    value={entreprise.siteWeb}
+                    onChange={handleEntrepriseFieldChange}
+                    className={inputClass}
+                    placeholder="Site web de l'entreprise"
+                  />
+                  <div>
+                    <label className={`block mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
+                      Logo de l'entreprise
+                    </label>
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-4 text-center ${
+                        isDragging ? 'border-teal-500 bg-teal-50' : 'border-gray-300'
+                      }`}
+                      onDrop={handleLogoDrop}
+                      onDragOver={handleLogoDragOver}
+                      onDragLeave={handleLogoDragLeave}
+                      onPaste={handleLogoPaste}
+                    >
+                      {previewUrl ? (
+                        <div className="relative">
+                          <img src={previewUrl} alt="Logo preview" className="max-w-full h-auto mx-auto" />
+                          <button
+                            type="button"
+                            onClick={handleLogoDelete}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                          >
+                            <XMarkIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+                          <p className="mt-1">Glissez et déposez un logo ici, ou cliquez pour sélectionner un fichier</p>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        onChange={handleLogoChange}
+                        accept="image/*"
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <label htmlFor="logo-upload" className="mt-2 inline-block px-4 py-2 bg-teal-500 text-white rounded cursor-pointer">
+                        Choisir un fichier
+                      </label>
                     </div>
-                  )}
-                  <input id="logo" type="file" className="hidden" onChange={handleLogoChange} accept="image/*" />
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

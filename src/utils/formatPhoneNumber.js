@@ -6,7 +6,7 @@ export const formatPhoneNumber = (phoneNumber) => {
   const match = cleaned.match(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
   
   if (match) {
-    return match.slice(1).join('.');
+    return match.slice(1).join(' ');
   }
   
   // Si le numéro n'a pas 10 chiffres, retourne le numéro original
