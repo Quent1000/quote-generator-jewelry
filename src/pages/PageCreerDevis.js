@@ -20,13 +20,16 @@ const PageCreerDevis = () => {
     gravure: '',
     styleGravure: '',
     options: {
-      poinconEtat: false,
-      deSertissage: false,
+      poinconMaitre: '',
+      poinconTitre: '',
+      marque: '',
+      gravureLogoMarque: false,
+      gravureNumeroSerie: false,
       rhodiage: false
     },
     commentaireInterne: '',
-    diamants: [{ taille: '', qte: 0, fourniPar: 'TGN 409', sertissage: '' }],
-    autresPierres: [{ forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 1 }],
+    diamants: [{ taille: '', qte: 0, fourniPar: 'TGN 409', sertissage: '', prixSertissage: 0 }],
+    autresPierres: [{ forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0 }],
     images: [],
     tempsAdministratif: { heures: 0, minutes: 0 },
     tempsCAO: { heures: 0, minutes: 0 },
@@ -42,8 +45,17 @@ const PageCreerDevis = () => {
   });
 
   const [stylesGravure, setStylesGravure] = useState([]);
-  const [prixDiamantsRonds, setPrixDiamantsRonds] = useState({});
   const [typesSertissage, setTypesSertissage] = useState([]);
+  const [parametres, setParametres] = useState({
+    prixSertissage: {},
+    prixDiamantsRonds: {},
+    prixPoincons: {
+      poinconMaitre: {},
+      poinconTitre: {},
+      marque: {}
+    },
+    coefficientDiamantsRonds: 1.15
+  });
 
   const metaux = [
     "Or Jaune 3N",
@@ -54,6 +66,39 @@ const PageCreerDevis = () => {
     "Argent 925",
     "Or jaune 24K",
     "Or jaune 2N"
+  ];
+
+  const formesPierres = [
+    "Rond",
+    "Ovale",
+    "Poire",
+    "Coussin",
+    "Marquise",
+    "Émeraude",
+    "Princesse",
+    "Asscher",
+    "Cœur",
+    "Trillion",
+    "Radiant",
+    "Baguette"
+  ];
+
+  const typesPierres = [
+    "Diamant",
+    "Saphir",
+    "Rubis",
+    "Émeraude",
+    "Améthyste",
+    "Topaze",
+    "Péridot",
+    "Citrine",
+    "Aigue-marine",
+    "Grenat",
+    "Tourmaline",
+    "Tanzanite",
+    "Opale",
+    "Quartz rose",
+    "Lapis-lazuli"
   ];
 
   useEffect(() => {
@@ -85,7 +130,16 @@ const PageCreerDevis = () => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setPrixDiamantsRonds(data.prixDiamantsRonds || {});
+        setParametres({
+          prixSertissage: data.prixSertissage || {},
+          prixDiamantsRonds: data.prixDiamantsRonds || {},
+          prixPoincons: data.prixPoincons || {
+            poinconMaitre: {},
+            poinconTitre: {},
+            marque: {}
+          },
+          coefficientDiamantsRonds: data.coefficientDiamantsRonds || 1.15
+        });
         setTypesSertissage(Object.keys(data.prixSertissage || {}));
       }
     };
@@ -97,7 +151,14 @@ const PageCreerDevis = () => {
     setDevis(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleOptionsChange = (option) => {
+  const handleOptionsChange = (option, value) => {
+    setDevis(prev => ({
+      ...prev,
+      options: { ...prev.options, [option]: value }
+    }));
+  };
+
+  const handleCheckboxChange = (option) => {
     setDevis(prev => ({
       ...prev,
       options: { ...prev.options, [option]: !prev.options[option] }
@@ -108,14 +169,15 @@ const PageCreerDevis = () => {
     const newDiamants = [...devis.diamants];
     newDiamants[index][field] = value;
     
-    if (field === 'taille') {
-      const carat = diametresEtCarats[value] || 0;
+    if (field === 'taille' || field === 'qte' || field === 'fourniPar' || field === 'sertissage') {
+      const tailleMm = parseFloat(newDiamants[index].taille);
+      const carat = diametresEtCarats[newDiamants[index].taille] || 0;
       newDiamants[index].carat = carat;
       
       // Trouver la catégorie de prix correspondante
-      const prixCategorie = Object.entries(prixDiamantsRonds).find(([categorie, prix]) => {
+      const prixCategorie = Object.entries(parametres.prixDiamantsRonds).find(([categorie]) => {
         const [min, max] = categorie.split(' - ').map(parseFloat);
-        return carat >= min && carat <= max;
+        return tailleMm >= min && tailleMm <= max;
       });
 
       if (prixCategorie) {
@@ -123,13 +185,19 @@ const PageCreerDevis = () => {
       } else {
         newDiamants[index].prixCarat = 0;
       }
-    }
 
-    // Calculer le prix total pour ce diamant
-    if (newDiamants[index].carat && newDiamants[index].prixCarat && newDiamants[index].qte) {
-      newDiamants[index].prixTotal = newDiamants[index].carat * newDiamants[index].prixCarat * newDiamants[index].qte;
-    } else {
-      newDiamants[index].prixTotal = 0;
+      // Calculer le prix total pour ce diamant
+      if (newDiamants[index].fourniPar === 'Client') {
+        newDiamants[index].prixTotal = 0;
+      } else if (newDiamants[index].carat && newDiamants[index].prixCarat && newDiamants[index].qte) {
+        newDiamants[index].prixTotal = newDiamants[index].carat * newDiamants[index].prixCarat * newDiamants[index].qte;
+      } else {
+        newDiamants[index].prixTotal = 0;
+      }
+
+      // Calculer le prix du sertissage
+      const prixSertissageUnitaire = parametres.prixSertissage[newDiamants[index].sertissage] || 0;
+      newDiamants[index].prixSertissage = prixSertissageUnitaire * newDiamants[index].qte;
     }
 
     setDevis(prev => ({ ...prev, diamants: newDiamants }));
@@ -137,14 +205,22 @@ const PageCreerDevis = () => {
 
   const handleAutresPierresChange = (index, field, value) => {
     const newAutresPierres = [...devis.autresPierres];
-    newAutresPierres[index][field] = value;
+    if (field === 'prix' || field === 'carat') {
+      // Permet uniquement les chiffres et un seul point décimal
+      const regex = /^\d*\.?\d*$/;
+      if (regex.test(value) || value === '') {
+        newAutresPierres[index][field] = value;
+      }
+    } else {
+      newAutresPierres[index][field] = value;
+    }
     setDevis(prev => ({ ...prev, autresPierres: newAutresPierres }));
   };
 
   const handleAddDiamant = () => {
     setDevis(prev => ({
       ...prev,
-      diamants: [...prev.diamants, { taille: '', qte: 0, fourniPar: 'TGN 409', sertissage: '' }]
+      diamants: [...prev.diamants, { taille: '', qte: 0, fourniPar: 'TGN 409', sertissage: '', prixSertissage: 0 }]
     }));
   };
 
@@ -155,10 +231,17 @@ const PageCreerDevis = () => {
     }));
   };
 
+  const handleRemoveAutrePierre = (index) => {
+    setDevis(prev => ({
+      ...prev,
+      autresPierres: prev.autresPierres.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleAddAutrePierre = () => {
     setDevis(prev => ({
       ...prev,
-      autresPierres: [...prev.autresPierres, { forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 1 }]
+      autresPierres: [...prev.autresPierres, { forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0 }]
     }));
   };
 
@@ -276,7 +359,9 @@ const PageCreerDevis = () => {
 
   return (
     <div className={`min-h-screen ${bgClass} p-8`}>
-      <h1 className="text-3xl font-bold mb-8">Nouveau devis</h1>
+      <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
+        Nouveau devis
+      </h1>
       
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div>
@@ -404,34 +489,63 @@ const PageCreerDevis = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-2">Options</label>
-          <div className="flex items-center">
+          <label className="block mb-2">Poinçon de maître</label>
+          <select
+            value={devis.options.poinconMaitre}
+            onChange={(e) => handleOptionsChange('poinconMaitre', e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Sélectionner</option>
+            {Object.keys(parametres.prixPoincons.poinconMaitre).map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block mb-2">Poinçon de titre</label>
+          <select
+            value={devis.options.poinconTitre}
+            onChange={(e) => handleOptionsChange('poinconTitre', e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Sélectionner</option>
+            {Object.keys(parametres.prixPoincons.poinconTitre).map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="flex items-center">
             <input
               type="checkbox"
-              checked={devis.options.poinconEtat}
-              onChange={() => handleOptionsChange('poinconEtat')}
+              checked={devis.options.gravureLogoMarque}
+              onChange={() => handleCheckboxChange('gravureLogoMarque')}
               className="mr-2"
             />
-            <label>Poinçon état</label>
-          </div>
-          <div className="flex items-center">
+            Gravure logo marque
+          </label>
+        </div>
+        <div>
+          <label className="flex items-center">
             <input
               type="checkbox"
-              checked={devis.options.deSertissage}
-              onChange={() => handleOptionsChange('deSertissage')}
+              checked={devis.options.gravureNumeroSerie}
+              onChange={() => handleCheckboxChange('gravureNumeroSerie')}
               className="mr-2"
             />
-            <label>De sertissage</label>
-          </div>
-          <div className="flex items-center">
+            Gravure N° série
+          </label>
+        </div>
+        <div>
+          <label className="flex items-center">
             <input
               type="checkbox"
               checked={devis.options.rhodiage}
-              onChange={() => handleOptionsChange('rhodiage')}
+              onChange={() => handleCheckboxChange('rhodiage')}
               className="mr-2"
             />
-            <label>Rhodiage</label>
-          </div>
+            Rhodiage
+          </label>
         </div>
         <div>
           <label className="block mb-2">Commentaire interne</label>
@@ -498,19 +612,19 @@ const PageCreerDevis = () => {
               </select>
             </div>
             <div>
-              <label className="block mb-2">Prix au carat</label>
+              <label className="block mb-2">Prix diamants</label>
               <input
-                type="number"
-                value={diamant.prixCarat}
+                type="text"
+                value={diamant.prixTotal ? `${diamant.prixTotal.toFixed(2)} €` : '0.00 €'}
                 readOnly
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="block mb-2">Prix total</label>
+              <label className="block mb-2">Prix sertissage</label>
               <input
-                type="number"
-                value={diamant.prixTotal}
+                type="text"
+                value={diamant.prixSertissage ? `${diamant.prixSertissage.toFixed(2)} €` : '0.00 €'}
                 readOnly
                 className={inputClass}
               />
@@ -531,64 +645,116 @@ const PageCreerDevis = () => {
         </button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Autres pierres</h2>
         {devis.autresPierres.map((pierre, index) => (
-          <div key={index} className="flex mb-4 space-x-4">
-            <input
-              type="text"
-              className={`${inputClass} flex-grow`}
-              placeholder="Forme"
-              value={pierre.forme}
-              onChange={(e) => handleAutresPierresChange(index, 'forme', e.target.value)}
-            />
-            <input
-              type="text"
-              className={`${inputClass} w-24`}
-              placeholder="Dimension"
-              value={pierre.dimension}
-              onChange={(e) => handleAutresPierresChange(index, 'dimension', e.target.value)}
-            />
-            <input
-              type="text"
-              className={`${inputClass} w-32`}
-              placeholder="Type"
-              value={pierre.type}
-              onChange={(e) => handleAutresPierresChange(index, 'type', e.target.value)}
-            />
-            <input
-              type="number"
-              className={`${inputClass} w-32`}
-              placeholder="Prix"
-              value={pierre.prix}
-              onChange={(e) => handleAutresPierresChange(index, 'prix', parseFloat(e.target.value))}
-            />
-            <input
-              type="number"
-              className={`${inputClass} w-32`}
-              placeholder="Carat"
-              value={pierre.carat}
-              onChange={(e) => handleAutresPierresChange(index, 'carat', parseFloat(e.target.value))}
-            />
-            <input
-              type="text"
-              className={`${inputClass} w-32`}
-              placeholder="Fourni par"
-              value={pierre.fourniPar}
-              onChange={(e) => handleAutresPierresChange(index, 'fourniPar', e.target.value)}
-            />
-            <input
-              type="number"
-              className={`${inputClass} w-32`}
-              placeholder="Qté"
-              value={pierre.qte}
-              onChange={(e) => handleAutresPierresChange(index, 'qte', parseInt(e.target.value))}
-            />
+          <div key={index} className="flex mb-4 space-x-4 items-end">
+            <div>
+              <label className="block mb-2">Forme</label>
+              <select
+                value={pierre.forme}
+                onChange={(e) => handleAutresPierresChange(index, 'forme', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Sélectionner une forme</option>
+                {formesPierres.map((forme) => (
+                  <option key={forme} value={forme}>{forme}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block mb-2">Dimension</label>
+              <input
+                type="text"
+                value={pierre.dimension}
+                onChange={(e) => handleAutresPierresChange(index, 'dimension', e.target.value)}
+                className={inputClass}
+                placeholder="ex : 4.34 x 2.61 x 2.2"
+              />
+            </div>
+            <div>
+              <label className="block mb-2">Type de pierres</label>
+              <select
+                value={pierre.type}
+                onChange={(e) => handleAutresPierresChange(index, 'type', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Sélectionner un type</option>
+                {typesPierres.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block mb-2">Prix de la pierre</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={pierre.prix}
+                  onChange={(e) => handleAutresPierresChange(index, 'prix', e.target.value)}
+                  className={`${inputClass} pr-8`}
+                  placeholder="0.00"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2">€</span>
+              </div>
+            </div>
+            <div>
+              <label className="block mb-2">Caratage</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={pierre.carat}
+                  onChange={(e) => handleAutresPierresChange(index, 'carat', e.target.value)}
+                  className={`${inputClass} pr-8`}
+                  placeholder="0.00"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2">ct</span>
+              </div>
+            </div>
+            <div>
+              <label className="block mb-2">Sertissage</label>
+              <select
+                value={pierre.sertissage}
+                onChange={(e) => handleAutresPierresChange(index, 'sertissage', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Sélectionner un sertissage</option>
+                {typesSertissage.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block mb-2">Fourni par</label>
+              <select
+                value={pierre.fourniPar}
+                onChange={(e) => handleAutresPierresChange(index, 'fourniPar', e.target.value)}
+                className={inputClass}
+              >
+                <option value="TGN 409">TGN 409</option>
+                <option value="Client">Client</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-2">Quantité</label>
+              <input
+                type="number"
+                value={pierre.qte}
+                onChange={(e) => handleAutresPierresChange(index, 'qte', parseInt(e.target.value))}
+                className={inputClass}
+              />
+            </div>
+            <button
+              onClick={() => handleRemoveAutrePierre(index)}
+              className="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors"
+            >
+              Supprimer
+            </button>
           </div>
         ))}
         <button
           onClick={handleAddAutrePierre}
-          className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors"
+          className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors mt-2"
         >
           Ajouter une autre pierre
         </button>

@@ -36,6 +36,15 @@ const Sidebar = () => {
     }
   };
 
+  const getUserInitials = () => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    } else if (user.email) {
+      return user.email[0].toUpperCase();
+    }
+    return '?';
+  };
+
   return (
     <div className={`w-64 h-screen ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} flex flex-col`}>
       <div className="flex items-center justify-center h-24 border-b border-gray-200 dark:border-gray-700">
@@ -61,21 +70,34 @@ const Sidebar = () => {
         </ul>
       </nav>
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <div className="w-8 h-8 mr-2 overflow-hidden rounded-full">
+        <div className="flex items-center mb-4">
+          <div className="w-12 h-12 overflow-hidden rounded-full mr-3">
+            {user.photoURL ? (
               <img
                 className="w-full h-full object-cover"
-                src={user.photoURL || "https://via.placeholder.com/32"}
-                alt="User avatar"
+                src={user.photoURL}
+                alt="Avatar de l'utilisateur"
               />
-            </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`
-                : user.email}
-            </span>
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center text-lg font-medium ${darkMode ? 'bg-gray-700 text-white' : 'bg-teal-100 text-teal-800'}`}>
+                {getUserInitials()}
+              </div>
+            )}
           </div>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+            {user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.email}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center px-4 py-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+          >
+            <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-2" />
+            <span>Déconnexion</span>
+          </button>
           <button
             onClick={toggleDarkMode}
             className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
@@ -83,13 +105,6 @@ const Sidebar = () => {
             {darkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
           </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-        >
-          <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-2" />
-          <span className="text-sm">Déconnexion</span>
-        </button>
       </div>
     </div>
   );

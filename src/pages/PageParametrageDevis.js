@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tab } from '@headlessui/react';
-import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { CogIcon, CurrencyDollarIcon, ScaleIcon, TruckIcon, CheckCircleIcon, XCircleIcon, FingerPrintIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -13,7 +13,9 @@ const PageParametrageDevis = () => {
     tauxHoraireBijouterie: 0,
     tauxHoraireAdministratif: 0,
     tauxHoraireDesign: 0,
+    tauxHoraireDesertissage: 0,
     prixSertissage: {},
+    coefficientDiamantsRonds: 1.15,
     prixGravure: {
       "Manuscrite": 20,
       "Bâton": 15
@@ -40,6 +42,20 @@ const PageParametrageDevis = () => {
       "3.70 - 3.85 mm": 1185,
       "3.90 - 4.10 mm": 1440,
       "4.15 - 4.55 mm": 2360
+    },
+    prixPoincons: {
+      poinconMaitre: {
+        gravureLaser: 6,
+        frappe: 5
+      },
+      poinconTitre: {
+        gravureLaser: 8,
+        frappe: 5
+      },
+      marque: {
+        gravureLogoMarque: 3,
+        gravureNumeroSerie: 8
+      }
     }
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -52,6 +68,7 @@ const PageParametrageDevis = () => {
       setParametres({
         ...data,
         tauxHoraireDesign: data.tauxHoraireDesign || 0,
+        tauxHoraireDesertissage: data.tauxHoraireDesertissage || 0,
         prixDiamantsRonds: data.prixDiamantsRonds || {
           "0.50 - 1.20 mm": 600,
           "1.25 - 1.75 mm": 580,
@@ -62,6 +79,20 @@ const PageParametrageDevis = () => {
           "3.70 - 3.85 mm": 1185,
           "3.90 - 4.10 mm": 1440,
           "4.15 - 4.55 mm": 2360
+        },
+        prixPoincons: data.prixPoincons || {
+          poinconMaitre: {
+            gravureLaser: 6,
+            frappe: 5
+          },
+          poinconTitre: {
+            gravureLaser: 8,
+            frappe: 5
+          },
+          marque: {
+            gravureLogoMarque: 3,
+            gravureNumeroSerie: 8
+          }
         }
       });
     } else {
@@ -71,6 +102,7 @@ const PageParametrageDevis = () => {
         tauxHoraireBijouterie: 50,
         tauxHoraireAdministratif: 50,
         tauxHoraireDesign: 50,
+        tauxHoraireDesertissage: 50,
         prixSertissage: {
           "Serti grain": 3,
           "Serti rail": 4,
@@ -109,6 +141,20 @@ const PageParametrageDevis = () => {
           "3.70 - 3.85 mm": 1185,
           "3.90 - 4.10 mm": 1440,
           "4.15 - 4.55 mm": 2360
+        },
+        prixPoincons: {
+          poinconMaitre: {
+            gravureLaser: 6,
+            frappe: 5
+          },
+          poinconTitre: {
+            gravureLaser: 8,
+            frappe: 5
+          },
+          marque: {
+            gravureLogoMarque: 3,
+            gravureNumeroSerie: 8
+          }
         }
       });
       const initialParametres = getInitialParametres();
@@ -121,10 +167,16 @@ const PageParametrageDevis = () => {
     fetchParametres();
   }, [fetchParametres]);
 
-  const handleInputChange = useCallback((e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setParametres(prev => ({ ...prev, [name]: parseFloat(value) }));
-  }, []);
+    if (name === 'coefficientDiamantsRonds') {
+      // Permettre à la fois le point et la virgule comme séparateur décimal
+      const sanitizedValue = value.replace(',', '.');
+      setParametres(prev => ({ ...prev, [name]: sanitizedValue }));
+    } else {
+      setParametres(prev => ({ ...prev, [name]: parseFloat(value) }));
+    }
+  };
 
   const handleNestedInputChange = useCallback((category, key, value) => {
     setParametres(prev => ({
@@ -135,6 +187,19 @@ const PageParametrageDevis = () => {
       }
     }));
   }, []);
+
+  const handleNestedPoinconInputChange = (category, type, value) => {
+    setParametres(prev => ({
+      ...prev,
+      prixPoincons: {
+        ...prev.prixPoincons,
+        [category]: {
+          ...prev.prixPoincons[category],
+          [type]: parseFloat(value)
+        }
+      }
+    }));
+  };
 
   const [notification, setNotification] = useState(null);
 
@@ -173,12 +238,10 @@ const PageParametrageDevis = () => {
 
   return (
     <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-      <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
-        Paramétrage des devis
-      </h1>
+      <h1 className="text-3xl font-bold mb-8">Paramétrage des devis</h1>
       <form onSubmit={handleSubmit}>
         <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
-          <Tab.List className="flex space-x-2 rounded-xl bg-teal-900/20 p-1 mb-4">
+          <Tab.List className="flex p-1 space-x-1 bg-teal-900/20 rounded-xl mb-8">
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <CogIcon className="w-5 h-5 mr-2 inline-block" />
               Taux horaires
@@ -198,6 +261,10 @@ const PageParametrageDevis = () => {
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <TruckIcon className="w-5 h-5 mr-2 inline-block" />
               Autres
+            </Tab>
+            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
+              <FingerPrintIcon className="w-5 h-5 mr-2 inline-block" />
+              Poinçons et Marques
             </Tab>
           </Tab.List>
           <Tab.Panels>
@@ -243,6 +310,16 @@ const PageParametrageDevis = () => {
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className="block mb-2">Taux horaire Dé-sertissage</label>
+                  <input
+                    type="number"
+                    name="tauxHoraireDesertissage"
+                    value={parametres.tauxHoraireDesertissage}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>
@@ -259,7 +336,18 @@ const PageParametrageDevis = () => {
                   </div>
                 ))}
               </div>
-              
+              <div className="mt-4">
+                <label className="block mb-2">Coefficient diamants ronds (%)</label>
+                <input
+                  type="text"
+                  name="coefficientDiamantsRonds"
+                  value={parametres.coefficientDiamantsRonds}
+                  onChange={handleInputChange}
+                  step="0.01"
+                  className={inputClass}
+                  pattern="^\d*[.,]?\d*$"
+                />
+              </div>
               <h3 className="text-xl font-semibold mb-4 mt-8">Prix diamants ronds (€/carat)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {Object.entries(parametres.prixDiamantsRonds).map(([taille, prix]) => (
@@ -331,6 +419,79 @@ const PageParametrageDevis = () => {
                     />
                   </div>
                 ))}
+              </div>
+            </Tab.Panel>
+            <Tab.Panel>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Poinçon de maître</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block mb-1">Gravure laser</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.poinconMaitre.gravureLaser}
+                        onChange={(e) => handleNestedPoinconInputChange('poinconMaitre', 'gravureLaser', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">Frappé</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.poinconMaitre.frappe}
+                        onChange={(e) => handleNestedPoinconInputChange('poinconMaitre', 'frappe', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Poinçon de titre</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block mb-1">Gravure laser</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.poinconTitre.gravureLaser}
+                        onChange={(e) => handleNestedPoinconInputChange('poinconTitre', 'gravureLaser', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">Frappé</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.poinconTitre.frappe}
+                        onChange={(e) => handleNestedPoinconInputChange('poinconTitre', 'frappe', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Marque</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block mb-1">Gravure logo marque</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.marque.gravureLogoMarque}
+                        onChange={(e) => handleNestedPoinconInputChange('marque', 'gravureLogoMarque', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">Gravure N° série</label>
+                      <input
+                        type="number"
+                        value={parametres.prixPoincons.marque.gravureNumeroSerie}
+                        onChange={(e) => handleNestedPoinconInputChange('marque', 'gravureNumeroSerie', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </Tab.Panel>
           </Tab.Panels>
