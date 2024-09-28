@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import NouveauClientPopup from '../components/clients/NouveauClientPopup';
+import { useDropzone } from 'react-dropzone';
+import { XMarkIcon, ArrowUpTrayIcon, StarIcon } from '@heroicons/react/24/outline';
+import { storage } from '../firebase'; // Assurez-vous d'avoir configuré Firebase Storage
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { v4 as uuidv4 } from 'uuid'; // Ajoutez cette importation en haut du fichier
 
 const PageCreerDevis = () => {
   const { darkMode } = useAppContext();
@@ -29,7 +34,7 @@ const PageCreerDevis = () => {
     },
     commentaireInterne: '',
     diamants: [{ taille: '', qte: 0, fourniPar: 'TGN 409', sertissage: '', prixSertissage: 0 }],
-    autresPierres: [{ forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0 }],
+    autresPierres: [{ forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0, sertissage: '' }],
     images: [],
     tempsAdministratif: { heures: 0, minutes: 0 },
     tempsCAO: { heures: 0, minutes: 0 },
@@ -100,6 +105,75 @@ const PageCreerDevis = () => {
     "Quartz rose",
     "Lapis-lazuli"
   ];
+
+  const [images, setImages] = useState([]);
+  const [mainImageId, setMainImageId] = useState(null);
+
+  useEffect(() => {
+    console.log("Images actuelles:", images);
+    console.log("Index de l'image principale:", mainImageId);
+  }, [images, mainImageId]);
+
+  const onDrop = useCallback((acceptedFiles) => {
+    console.log("Fichiers déposés:", acceptedFiles);
+    const newImages = acceptedFiles.map(file => ({
+      id: uuidv4(),
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    console.log("Nouvelles images créées:", newImages);
+    setImages(prevImages => {
+      const updatedImages = [...prevImages, ...newImages];
+      console.log("Images mises à jour:", updatedImages);
+      if (!mainImageId && updatedImages.length > 0) {
+        setMainImageId(updatedImages[0].id);
+      }
+      return updatedImages;
+    });
+  }, [mainImageId]);
+
+  const handlePaste = useCallback((event) => {
+    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+    const pastedFiles = [];
+    for (let index in items) {
+      const item = items[index];
+      if (item.kind === 'file') {
+        const blob = item.getAsFile();
+        pastedFiles.push(blob);
+      }
+    }
+    if (pastedFiles.length > 0) {
+      onDrop(pastedFiles);
+    }
+  }, [onDrop]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: 'image/*',
+    multiple: true
+  });
+
+  const removeImage = (id) => {
+    console.log("Suppression de l'image à l'index:", id);
+    setImages(prevImages => {
+      const newImages = prevImages.filter(img => img.id !== id);
+      console.log("Images après suppression:", newImages);
+      if (id === mainImageId) {
+        console.log("L'image principale a été supprimée, mise à jour de l'index principal");
+        setMainImageId(newImages.length > 0 ? newImages[0].id : null);
+      }
+      return newImages;
+    });
+  };
+
+  const setAsMainImage = (id) => {
+    console.log("Changement d'image principale. Nouvel index:", id);
+    setMainImageId(id);
+  };
+
+  useEffect(() => {
+    return () => images.forEach(image => URL.revokeObjectURL(image.preview));
+  }, [images]);
 
   useEffect(() => {
     const fetchStylesGravure = async () => {
@@ -241,23 +315,36 @@ const PageCreerDevis = () => {
   const handleAddAutrePierre = () => {
     setDevis(prev => ({
       ...prev,
-      autresPierres: [...prev.autresPierres, { forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0 }]
+      autresPierres: [...prev.autresPierres, { forme: '', dimension: '', type: '', prix: 0, carat: 0, fourniPar: 'TGN 409', qte: 0, sertissage: '' }]
     }));
-  };
-
-  const handleImageUpload = (event) => {
-    // Logique pour gérer l'upload d'images
   };
 
   const handleSubmit = async () => {
     try {
-      await addDoc(collection(db, 'devis'), devis);
+      // Upload des images
+      const imageUrls = await Promise.all(images.map(uploadImage));
+      
+      // Créer le devis avec les URLs des images
+      const newDevis = {
+        ...devis,
+        images: imageUrls,
+        imageprincipale: imageUrls[0] // La première image est l'image principale
+      };
+
+      // Ajouter le devis à Firestore
+      await addDoc(collection(db, 'devis'), newDevis);
       alert('Devis créé avec succès !');
       // Réinitialiser le formulaire ou rediriger
     } catch (error) {
       console.error("Erreur lors de la création du devis :", error);
       alert('Une erreur est survenue lors de la création du devis.');
     }
+  };
+
+  const uploadImage = async (image) => {
+    const storageRef = ref(storage, `devis_images/${Date.now()}_${image.name}`);
+    await uploadBytes(storageRef, image);
+    return await getDownloadURL(storageRef);
   };
 
   const bgClass = darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900';
@@ -761,13 +848,52 @@ const PageCreerDevis = () => {
       </div>
 
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Images</h2>
-        <input
-          type="file"
-          multiple
-          onChange={handleImageUpload}
-          className={inputClass}
-        />
+        <h2 className="text-xl font-semibold mb-4">Images du devis</h2>
+        <div 
+          {...getRootProps()} 
+          className={`p-6 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+            isDragActive 
+              ? 'border-teal-500 bg-teal-50 dark:bg-teal-900' 
+              : 'border-gray-300 hover:border-teal-500'
+          }`}
+          onPaste={handlePaste}
+        >
+          <input {...getInputProps()} />
+          <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <p className="mt-2">Glissez et déposez des images ici, ou cliquez pour sélectionner des fichiers</p>
+          <p className="text-sm text-gray-500">Vous pouvez aussi coller une image directement (Ctrl+V)</p>
+        </div>
+
+        {images.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {images.map((image) => (
+              <div key={image.id} className="relative group">
+                {console.log("Rendu de l'image:", image.id, image)}
+                <img 
+                  src={image.preview} 
+                  alt={`Aperçu ${image.id}`}
+                  className={`w-full h-full object-cover rounded-lg ${image.id === mainImageId ? 'border-4 border-teal-500' : ''}`}
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() => removeImage(image.id)}
+                    className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                  {image.id !== mainImageId && (
+                    <button
+                      onClick={() => setAsMainImage(image.id)}
+                      className="p-1 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+                    >
+                      <StarIcon className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-4">
