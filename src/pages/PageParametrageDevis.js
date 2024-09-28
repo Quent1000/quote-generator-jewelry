@@ -300,6 +300,18 @@ const PageParametrageDevis = () => {
     localStorage.setItem('selectedTabIndex', selectedIndex.toString());
   }, [selectedIndex]);
 
+  // Fonction pour trier les diamètres
+  const sortDiameterRanges = (a, b) => {
+    const getMinDiameter = (range) => {
+      const [min] = range.split('-').map(parseFloat);
+      return min;
+    };
+    return getMinDiameter(a) - getMinDiameter(b);
+  };
+
+  // Fonction pour trier les types de sertissage
+  const sortSertissageTypes = (a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' });
+
   return (
     <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
       <h1 className="text-3xl font-bold mb-8">Paramétrage des devis</h1>
@@ -314,10 +326,7 @@ const PageParametrageDevis = () => {
               <ScaleIcon className="w-5 h-5 mr-2 inline-block" />
               Prix sertissage
             </Tab>
-            <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
-              <CurrencyDollarIcon className="w-5 h-5 mr-2 inline-block" />
-              Prix gravure
-            </Tab>
+            {/* Suppression de l'onglet "Prix gravure" */}
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <CurrencyDollarIcon className="w-5 h-5 mr-2 inline-block" />
               Prix métaux
@@ -392,7 +401,9 @@ const PageParametrageDevis = () => {
             </Tab.Panel>
             <Tab.Panel>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixSertissage || {}).map(([type, prix]) => (
+                {Object.entries(parametres.prixSertissage || {})
+                  .sort(([a], [b]) => sortSertissageTypes(a, b))
+                  .map(([type, prix]) => (
                   <div key={type}>
                     <label className="block mb-2">{type}</label>
                     <input
@@ -418,32 +429,19 @@ const PageParametrageDevis = () => {
               </div>
               <h3 className="text-xl font-semibold mb-4 mt-8">Prix diamants ronds (€/carat)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixDiamantsRonds).map(([taille, prix]) => (
-                  <div key={taille}>
-                    <label className="block mb-2">{taille}</label>
-                    <input
-                      type="number"
-                      value={prix}
-                      onChange={(e) => handleNestedInputChange('prixDiamantsRonds', taille, e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                ))}
-              </div>
-            </Tab.Panel>
-            <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(parametres.prixGravure).map(([type, prix]) => (
-                  <div key={type}>
-                    <label className="block mb-2">{type}</label>
-                    <input
-                      type="number"
-                      value={prix}
-                      onChange={(e) => handleNestedInputChange('prixGravure', type, e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                ))}
+                {Object.entries(parametres.prixDiamantsRonds)
+                  .sort(([a], [b]) => sortDiameterRanges(a, b))
+                  .map(([taille, prix]) => (
+                    <div key={taille}>
+                      <label className="block mb-2">{taille}</label>
+                      <input
+                        type="number"
+                        value={prix}
+                        onChange={(e) => handleNestedInputChange('prixDiamantsRonds', taille, e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  ))}
               </div>
             </Tab.Panel>
             <Tab.Panel>
@@ -500,7 +498,7 @@ const PageParametrageDevis = () => {
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Poinçon de maître</h3>
                   <div className="space-y-2">
@@ -581,6 +579,31 @@ const PageParametrageDevis = () => {
                       className={inputClass}
                       step="0.01"
                     />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Gravure</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block mb-1">Gravure Manuscrite</label>
+                      <input
+                        type="number"
+                        value={parametres.prixGravure.Manuscrite}
+                        onChange={(e) => handleNestedInputChange('prixGravure', 'Manuscrite', e.target.value)}
+                        className={inputClass}
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1">Bâton</label>
+                      <input
+                        type="number"
+                        value={parametres.prixGravure.Bâton}
+                        onChange={(e) => handleNestedInputChange('prixGravure', 'Bâton', e.target.value)}
+                        className={inputClass}
+                        step="0.01"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

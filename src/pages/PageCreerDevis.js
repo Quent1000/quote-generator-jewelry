@@ -336,43 +336,30 @@ const PageCreerDevis = () => {
   }));
 
   const handleInputChange = (field, value) => {
-    if (['tempsAdministratif', 'tempsCAO', 'tempsRepare', 'tempsPolissage', 'tempsDessertissage', 'tempsDesign'].includes(field)) {
-      setDevis(prev => ({
-        ...prev,
-        [field]: {
-          ...prev[field],
-          ...value
+    setDevis(prev => {
+      const newDevis = { ...prev, [field]: value };
+
+      // Si le champ modifié est le métal
+      if (field === 'metal') {
+        // Si le nouveau métal est "Or Gris", cocher le rhodiage
+        if (value === 'Or Gris') {
+          newDevis.options = { ...newDevis.options, rhodiage: true };
+        } else {
+          // Sinon, décocher le rhodiage
+          newDevis.options = { ...newDevis.options, rhodiage: false };
         }
-      }));
-    } else if (['tarifFonte', 'tarifImpressionCire', 'tarifImpressionResine'].includes(field)) {
-      const impressionType = field.replace('tarif', '').toLowerCase();
-      setDevis(prev => ({
-        ...prev,
-        [field]: value,
-        couts: {
-          ...prev.couts,
-          impression: {
-            ...prev.couts.impression,
-            [impressionType]: value === 'custom' ? 0 : parseFloat(value) || 0
-          }
-        }
-      }));
-    } else if (['tarifFonteCustom', 'tarifImpressionCireCustom', 'tarifImpressionResineCustom'].includes(field)) {
-      const impressionType = field.replace('tarifCustom', '').toLowerCase();
-      setDevis(prev => ({
-        ...prev,
-        [field]: value,
-        couts: {
-          ...prev.couts,
-          impression: {
-            ...prev.couts.impression,
-            [impressionType]: parseFloat(value) || 0
-          }
-        }
-      }));
-    } else {
-      setDevis(prev => ({ ...prev, [field]: value }));
-    }
+      }
+
+      // Calculer la valeur du métal si le poids estimé ou le métal change
+      if (field === 'poidsEstime' || field === 'metal') {
+        const prixMetal = prixMetaux[newDevis.metal] || 0;
+        const poidsEstime = parseFloat(newDevis.poidsEstime) || 0;
+        const nouvelleValeurMetal = (prixMetal * poidsEstime) / 1000;
+        setValeurMetal(nouvelleValeurMetal);
+      }
+
+      return newDevis;
+    });
   };
 
   const handleOptionsChange = (option, value) => {
@@ -814,7 +801,7 @@ const PageCreerDevis = () => {
                   onChange={() => handleCheckboxChange('gravureNumeroSerie')}
                   className="form-checkbox h-5 w-5 text-teal-600"
                 />
-                <span>Gravure N° série ({parametres.prixPoincons.marque.gravureNumeroSerie}€)</span>
+                <span>Gravure N° de série ({parametres.prixPoincons.marque.gravureNumeroSerie}€)</span>
               </label>
             </div>
           </div>
@@ -1044,7 +1031,7 @@ const PageCreerDevis = () => {
               </select>
             </div>
             <div>
-              <label className="block mb-2">Quantité</label>
+              <label className="block mb-2">Quantit</label>
               <input
                 type="number"
                 value={pierre.qte}
