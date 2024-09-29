@@ -326,14 +326,13 @@ const PageParametrageDevis = () => {
               <ScaleIcon className="w-5 h-5 mr-2 inline-block" />
               Prix sertissage
             </Tab>
-            {/* Suppression de l'onglet "Prix gravure" */}
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <CurrencyDollarIcon className="w-5 h-5 mr-2 inline-block" />
               Prix métaux
             </Tab>
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <TruckIcon className="w-5 h-5 mr-2 inline-block" />
-              Autres
+              Livraison
             </Tab>
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <PencilIcon className="w-5 h-5 mr-2 inline-block" />
@@ -464,20 +463,6 @@ const PageParametrageDevis = () => {
             </Tab.Panel>
             <Tab.Panel>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-xl font-semibold mb-4">Prix Rhodiage</h3>
-                  <div>
-                    <label className="block mb-2">Prix Rhodiage</label>
-                    <input
-                      type="number"
-                      name="prixRhodiage"
-                      value={parametres.prixRhodiage}
-                      onChange={handleInputChange}
-                      className={inputClass}
-                      step="0.01"
-                    />
-                  </div>
-                </div>
                 <div>
                   <h3 className="text-xl font-semibold mb-4">Prix Livraison</h3>
                   <div className="grid grid-cols-1 gap-4">

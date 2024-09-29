@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { TrashIcon, CheckIcon, UserIcon, PencilIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import AnimatedBackground from '../components/ui/AnimatedBackground';
 
 const colors = {
   light: ['bg-yellow-200', 'bg-green-200', 'bg-blue-200', 'bg-pink-200', 'bg-purple-200'],
@@ -168,246 +169,248 @@ const PageAccueil = () => {
   console.log('Rendu final, tâches:', filteredTasks);
 
   return (
-    <div className={`min-h-screen p-8 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-      <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
-        Bienvenue sur DevisApp
-      </h1>
-      
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
-          <button
-            onClick={() => setShowAddTaskForm(!showAddTaskForm)}
-            className="bg-teal-500 text-white px-4 py-2 rounded-md flex items-center"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            {showAddTaskForm ? "Fermer" : "Ajouter une tâche"}
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center"
-          >
-            <FunnelIcon className="h-5 w-5 mr-2" />
-            Filtres
-          </button>
-        </div>
-
-        {showAddTaskForm && (
-          <div className={`mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6`}>
-            <h2 className="text-2xl font-semibold mb-4">Ajouter une nouvelle tâche</h2>
-            <form onSubmit={addTask} className="space-y-4">
-              <input
-                type="text"
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                placeholder="Nouvelle tâche..."
-                className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                }`}
-              />
-              <div className="flex flex-wrap gap-2">
-                {users.map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => setSelectedUsers(prev => 
-                      prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
-                    )}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      selectedUsers.includes(u.id) 
-                        ? 'bg-teal-500 text-white' 
-                        : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {u.firstName} {u.lastName}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                {colors[darkMode ? 'dark' : 'light'].map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-8 h-8 rounded-full ${color} ${selectedColor === color ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
-                  />
-                ))}
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-teal-500 text-white p-2 rounded-md hover:bg-teal-600 transition-colors duration-200"
-              >
-                Ajouter
-              </button>
-            </form>
+    <AnimatedBackground darkMode={darkMode}>
+      <div className="min-h-screen p-8">
+        <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
+          Bienvenue sur DevisApp
+        </h1>
+        
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8 flex justify-between items-center">
+            <button
+              onClick={() => setShowAddTaskForm(!showAddTaskForm)}
+              className="bg-teal-500 text-white px-4 py-2 rounded-md flex items-center"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              {showAddTaskForm ? "Fermer" : "Ajouter une tâche"}
+            </button>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center"
+            >
+              <FunnelIcon className="h-5 w-5 mr-2" />
+              Filtres
+            </button>
           </div>
-        )}
 
-        {showFilters && (
-          <div className={`mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6`}>
-            <h2 className="text-2xl font-semibold mb-4">Filtres</h2>
-            <div className="flex flex-col space-y-4">
-              <div>
-                <label className="block mb-2">Filtrer par utilisateur attribué :</label>
-                <select
-                  value={filteredUser || ''}
-                  onChange={(e) => setFilteredUser(e.target.value || null)}
-                  className={`w-full p-2 border rounded-md ${
+          {showAddTaskForm && (
+            <div className={`mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6`}>
+              <h2 className="text-2xl font-semibold mb-4">Ajouter une nouvelle tâche</h2>
+              <form onSubmit={addTask} className="space-y-4">
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  placeholder="Nouvelle tâche..."
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                   }`}
-                >
-                  <option value="">Tous les utilisateurs</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="showCompletedTasks"
-                  checked={showCompletedTasks}
-                  onChange={(e) => setShowCompletedTasks(e.target.checked)}
-                  className="mr-2"
                 />
-                <label htmlFor="showCompletedTasks">Afficher les tâches terminées</label>
+                <div className="flex flex-wrap gap-2">
+                  {users.map(u => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setSelectedUsers(prev => 
+                        prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                      )}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        selectedUsers.includes(u.id) 
+                          ? 'bg-teal-500 text-white' 
+                          : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {u.firstName} {u.lastName}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  {colors[darkMode ? 'dark' : 'light'].map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(color)}
+                      className={`w-8 h-8 rounded-full ${color} ${selectedColor === color ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-teal-500 text-white p-2 rounded-md hover:bg-teal-600 transition-colors duration-200"
+                >
+                  Ajouter
+                </button>
+              </form>
+            </div>
+          )}
+
+          {showFilters && (
+            <div className={`mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6`}>
+              <h2 className="text-2xl font-semibold mb-4">Filtres</h2>
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <label className="block mb-2">Filtrer par utilisateur attribué :</label>
+                  <select
+                    value={filteredUser || ''}
+                    onChange={(e) => setFilteredUser(e.target.value || null)}
+                    className={`w-full p-2 border rounded-md ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="">Tous les utilisateurs</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="showCompletedTasks"
+                    checked={showCompletedTasks}
+                    onChange={(e) => setShowCompletedTasks(e.target.checked)}
+                    className="mr-2"
+                  />
+                  <label htmlFor="showCompletedTasks">Afficher les tâches terminées</label>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {isLoading ? (
-          <p>Chargement des tâches...</p>
-        ) : isDndReady ? (
-          filteredTasks.length > 0 ? (
-            <ul className="space-y-4 min-h-[50px]">
-              {filteredTasks.map((task, index) => {
-                const textColorClass = postItTextColors[task.color] || 'text-gray-900';
-              
-                return (
-                  <li
-                    key={task.id}
-                    className={`${task.color} p-4 rounded-lg shadow-md transition-all duration-300 ${task.completed ? 'opacity-50 line-through' : ''}`}
-                  >
-                    {editingTask && editingTask.id === task.id ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editingTask.text}
-                          onChange={(e) => setEditingTask({...editingTask, text: e.target.value})}
-                          className={`w-full p-2 border rounded-md ${
-                            darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                        />
-                        <div className="flex gap-2">
-                          {colors[darkMode ? 'dark' : 'light'].map(color => (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => setEditingTask({...editingTask, color})}
-                              className={`w-8 h-8 rounded-full ${color} ${editingTask.color === color ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
-                            />
-                          ))}
+          {isLoading ? (
+            <p>Chargement des tâches...</p>
+          ) : isDndReady ? (
+            filteredTasks.length > 0 ? (
+              <ul className="space-y-4 min-h-[50px]">
+                {filteredTasks.map((task, index) => {
+                  const textColorClass = postItTextColors[task.color] || 'text-gray-900';
+                
+                  return (
+                    <li
+                      key={task.id}
+                      className={`${task.color} p-4 rounded-lg shadow-md transition-all duration-300 ${task.completed ? 'opacity-50 line-through' : ''}`}
+                    >
+                      {editingTask && editingTask.id === task.id ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={editingTask.text}
+                            onChange={(e) => setEditingTask({...editingTask, text: e.target.value})}
+                            className={`w-full p-2 border rounded-md ${
+                              darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                          <div className="flex gap-2">
+                            {colors[darkMode ? 'dark' : 'light'].map(color => (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => setEditingTask({...editingTask, color})}
+                                className={`w-8 h-8 rounded-full ${color} ${editingTask.color === color ? 'ring-2 ring-offset-2 ring-teal-500' : ''}`}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {users.map(u => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => setEditingTask({
+                                  ...editingTask,
+                                  assignedTo: editingTask.assignedTo.includes(u.id)
+                                    ? editingTask.assignedTo.filter(id => id !== u.id)
+                                    : [...editingTask.assignedTo, u.id]
+                                })}
+                                className={`px-3 py-1 rounded-full text-sm ${
+                                  editingTask.assignedTo.includes(u.id) 
+                                    ? 'bg-teal-500 text-white' 
+                                    : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                                }`}
+                              >
+                                {u.firstName} {u.lastName}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <button onClick={saveEditedTask} className="bg-green-500 text-white px-4 py-2 rounded">Sauvegarder</button>
+                            <button onClick={cancelEditing} className="bg-red-500 text-white px-4 py-2 rounded">Annuler</button>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {users.map(u => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => setEditingTask({
-                                ...editingTask,
-                                assignedTo: editingTask.assignedTo.includes(u.id)
-                                  ? editingTask.assignedTo.filter(id => id !== u.id)
-                                  : [...editingTask.assignedTo, u.id]
+                      ) : (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className={`text-lg font-semibold ${textColorClass}`}>{task.text}</h3>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => moveTask(task.id, 'up')}
+                                className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
+                                disabled={index === 0}
+                              >
+                                <ChevronUpIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => moveTask(task.id, 'down')}
+                                className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
+                                disabled={index === filteredTasks.length - 1}
+                              >
+                                <ChevronDownIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => toggleTask(task.id, task.completed)}
+                                className={`p-1 rounded-full ${
+                                  task.completed ? 'bg-green-500 text-white' : `${textColorClass} bg-opacity-20`
+                                } hover:bg-opacity-30`}
+                              >
+                                <CheckIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => startEditingTask(task)}
+                                className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => deleteTask(task.id)}
+                                className={`p-1 rounded-full bg-red-500 text-white hover:bg-red-600`}
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className={`flex items-center justify-between text-sm ${textColorClass}`}>
+                            <div className="flex items-center space-x-1">
+                              <UserIcon className="h-4 w-4" />
+                              <span>{getUserName(task.createdBy)}</span>
+                            </div>
+                            <div className="flex -space-x-2">
+                              {task.assignedTo.map(userId => {
+                                const assignedUser = users.find(u => u.id === userId);
+                                return assignedUser ? (
+                                  <div key={userId} className={`w-8 h-8 rounded-full ${darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-300 text-gray-700'} flex items-center justify-center text-xs font-bold border-2 ${darkMode ? 'border-gray-800' : 'border-white'}`}>
+                                    {assignedUser.firstName[0]}{assignedUser.lastName[0]}
+                                  </div>
+                                ) : null;
                               })}
-                              className={`px-3 py-1 rounded-full text-sm ${
-                                editingTask.assignedTo.includes(u.id) 
-                                  ? 'bg-teal-500 text-white' 
-                                  : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                              }`}
-                            >
-                              {u.firstName} {u.lastName}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <button onClick={saveEditedTask} className="bg-green-500 text-white px-4 py-2 rounded">Sauvegarder</button>
-                          <button onClick={cancelEditing} className="bg-red-500 text-white px-4 py-2 rounded">Annuler</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className={`text-lg font-semibold ${textColorClass}`}>{task.text}</h3>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => moveTask(task.id, 'up')}
-                              className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
-                              disabled={index === 0}
-                            >
-                              <ChevronUpIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => moveTask(task.id, 'down')}
-                              className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
-                              disabled={index === filteredTasks.length - 1}
-                            >
-                              <ChevronDownIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => toggleTask(task.id, task.completed)}
-                              className={`p-1 rounded-full ${
-                                task.completed ? 'bg-green-500 text-white' : `${textColorClass} bg-opacity-20`
-                              } hover:bg-opacity-30`}
-                            >
-                              <CheckIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => startEditingTask(task)}
-                              className={`p-1 rounded-full ${textColorClass} bg-opacity-20 hover:bg-opacity-30`}
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id)}
-                              className={`p-1 rounded-full bg-red-500 text-white hover:bg-red-600`}
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
+                            </div>
                           </div>
                         </div>
-                        <div className={`flex items-center justify-between text-sm ${textColorClass}`}>
-                          <div className="flex items-center space-x-1">
-                            <UserIcon className="h-4 w-4" />
-                            <span>{getUserName(task.createdBy)}</span>
-                          </div>
-                          <div className="flex -space-x-2">
-                            {task.assignedTo.map(userId => {
-                              const assignedUser = users.find(u => u.id === userId);
-                              return assignedUser ? (
-                                <div key={userId} className={`w-8 h-8 rounded-full ${darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-300 text-gray-700'} flex items-center justify-center text-xs font-bold border-2 ${darkMode ? 'border-gray-800' : 'border-white'}`}>
-                                  {assignedUser.firstName[0]}{assignedUser.lastName[0]}
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p>Aucune tâche à afficher.</p>
+            )
           ) : (
-            <p>Aucune tâche à afficher.</p>
-          )
-        ) : (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
-            <p className="mt-4">Chargement des tâches...</p>
-          </div>
-        )}
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+              <p className="mt-4">Chargement des tâches...</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </AnimatedBackground>
   );
 };
 
