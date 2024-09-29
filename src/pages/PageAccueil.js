@@ -495,20 +495,22 @@ const PageAccueil = () => {
                                 </p>
                               </div>
                               <div className="flex justify-between items-end mt-4">
-                                <div className="flex flex-wrap">
+                                <div className="flex-grow overflow-hidden">
                                   {task.assignedTo && task.assignedTo.length > 0 && (
-                                    task.assignedTo.map(userId => {
-                                      const assignedUser = users.find(u => u.id === userId);
-                                      return assignedUser ? (
-                                        <span key={userId} className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mr-2`}>
-                                          {assignedUser.firstName} {assignedUser.lastName}
-                                        </span>
-                                      ) : null;
-                                    })
+                                    <div className="flex flex-wrap">
+                                      {task.assignedTo.map(userId => {
+                                        const assignedUser = users.find(u => u.id === userId);
+                                        return assignedUser ? (
+                                          <span key={userId} className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mr-2 truncate`}>
+                                            {assignedUser.firstName} {assignedUser.lastName}
+                                          </span>
+                                        ) : null;
+                                      })}
+                                    </div>
                                   )}
                                 </div>
                                 {task.priority && (
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${priorityColors[task.priority]}`}>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2 ${priorityColors[task.priority]}`}>
                                     {priorities.find(p => p.id === task.priority)?.name || task.priority}
                                   </span>
                                 )}
