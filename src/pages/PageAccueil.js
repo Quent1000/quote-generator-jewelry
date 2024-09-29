@@ -212,11 +212,13 @@ const PageAccueil = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Recalculer l'ordre pour maintenir la structure de la grille
     const updatedItems = items.map((item, index) => ({
       ...item,
       order: index
     }));
+
+    // Mise à jour immédiate de l'état local
+    setTasks(updatedItems);
 
     // Mise à jour de l'ordre dans Firestore
     const batch = writeBatch(db);
@@ -225,10 +227,7 @@ const PageAccueil = () => {
       batch.update(taskRef, { order: task.order });
     });
 
-    batch.commit().then(() => {
-      setTasks(updatedItems);
-      console.log('Mise à jour de l\'ordre des tâches réussie');
-    }).catch((error) => {
+    batch.commit().catch((error) => {
       console.error("Erreur lors de la mise à jour de l'ordre des tâches:", error);
     });
   }, [tasks]);
@@ -250,7 +249,7 @@ const PageAccueil = () => {
 
   return (
     <AnimatedBackground darkMode={darkMode} intensity="low">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 overflow-hidden">
         <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
           Bienvenue sur DevisApp
         </h1>
@@ -439,78 +438,92 @@ const PageAccueil = () => {
           )}
 
           {/* Liste des tâches */}
-          {isLoading ? (
-            <p>Chargement des tâches...</p>
-          ) : (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="tasks">
-                {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                  >
-                    {sortedFilteredTasks.map((task, index) => (
-                      <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onClick={() => openTaskDetails(task)}
-                            className={`${task.color} p-4 rounded-lg shadow-md transition-all duration-300 cursor-pointer ${
-                              task.completed ? 'opacity-50' : ''
-                            } ${
-                              snapshot.isDragging ? 'shadow-lg scale-105' : ''
-                            } flex flex-col justify-between`}
-                          >
-                            <div>
-                              <h3 className={`text-lg font-semibold ${postItTextColors[task.color] || 'text-gray-900'} ${task.completed ? 'line-through' : ''}`}>
-                                {task.text}
-                              </h3>
-                              {task.description && (
-                                <p className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mt-2 line-clamp-2`}>
-                                  {truncateDescription(task.description)}
+          <div className="mt-8 overflow-hidden">
+            {isLoading ? (
+              <p>Chargement des tâches...</p>
+            ) : (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="tasks" direction="horizontal">
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto scrollbar-hide"
+                      style={{ 
+                        display: 'grid',
+                        maxHeight: 'calc(100vh - 200px)', // Ajustez cette valeur selon vos besoins
+                        overflowX: 'hidden', // Masque la barre de défilement horizontale
+                        msOverflowStyle: 'none',  // Pour Internet Explorer et Edge
+                        scrollbarWidth: 'none',  // Pour Firefox
+                      }}
+                    >
+                      {sortedFilteredTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => openTaskDetails(task)}
+                              className={`${task.color} p-4 rounded-lg shadow-md cursor-pointer ${
+                                task.completed ? 'opacity-50' : ''
+                              } ${
+                                snapshot.isDragging ? 'shadow-lg scale-105' : ''
+                              } flex flex-col justify-between`}
+                              style={{
+                                ...provided.draggableProps.style,
+                                gridColumn: 'auto',
+                                gridRow: 'auto',
+                              }}
+                            >
+                              <div>
+                                <h3 className={`text-lg font-semibold ${postItTextColors[task.color] || 'text-gray-900'} ${task.completed ? 'line-through' : ''}`}>
+                                  {task.text}
+                                </h3>
+                                {task.description && (
+                                  <p className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mt-2 line-clamp-2`}>
+                                    {truncateDescription(task.description)}
+                                  </p>
+                                )}
+                                <p className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mt-2`}>
+                                  {task.dueDate && task.dueDate.toDate && (
+                                    <span className="flex items-center mb-1">
+                                      <CalendarIcon className="h-4 w-4 mr-1" />
+                                      {new Date(task.dueDate.toDate()).toLocaleDateString()}
+                                    </span>
+                                  )}
                                 </p>
-                              )}
-                              <p className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mt-2`}>
-                                {task.dueDate && task.dueDate.toDate && (
-                                  <span className="flex items-center mb-1">
-                                    <CalendarIcon className="h-4 w-4 mr-1" />
-                                    {new Date(task.dueDate.toDate()).toLocaleDateString()}
+                              </div>
+                              <div className="flex justify-between items-end mt-4">
+                                <div className="flex flex-wrap">
+                                  {task.assignedTo && task.assignedTo.length > 0 && (
+                                    task.assignedTo.map(userId => {
+                                      const assignedUser = users.find(u => u.id === userId);
+                                      return assignedUser ? (
+                                        <span key={userId} className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mr-2`}>
+                                          {assignedUser.firstName} {assignedUser.lastName}
+                                        </span>
+                                      ) : null;
+                                    })
+                                  )}
+                                </div>
+                                {task.priority && (
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${priorityColors[task.priority]}`}>
+                                    {priorities.find(p => p.id === task.priority)?.name || task.priority}
                                   </span>
                                 )}
-                              </p>
-                            </div>
-                            <div className="flex justify-between items-end mt-4">
-                              <div className="flex flex-wrap">
-                                {task.assignedTo && task.assignedTo.length > 0 && (
-                                  task.assignedTo.map(userId => {
-                                    const assignedUser = users.find(u => u.id === userId);
-                                    return assignedUser ? (
-                                      <span key={userId} className={`text-sm ${postItTextColors[task.color] || 'text-gray-900'} mr-2`}>
-                                        {assignedUser.firstName} {assignedUser.lastName}
-                                      </span>
-                                    ) : null;
-                                  })
-                                )}
                               </div>
-                              {task.priority && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${priorityColors[task.priority]}`}>
-                                  {priorities.find(p => p.id === task.priority)?.name || task.priority}
-                                </span>
-                              )}
                             </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </div>
         </div>
       </div>
 
