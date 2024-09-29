@@ -58,8 +58,9 @@ const AnimatedBackground = ({ children, darkMode, intensity = 'medium' }) => {
         gradient.addColorStop(0, `rgba(6, 182, 212, ${0.1 * breathingFactor})`);
         gradient.addColorStop(1, `rgba(59, 130, 246, ${0.05 * breathingFactor})`);
       } else {
-        gradient.addColorStop(0, `rgba(6, 182, 212, ${0.05 * breathingFactor})`);
-        gradient.addColorStop(1, `rgba(59, 130, 246, ${0.02 * breathingFactor})`);
+        // Augmenter encore plus le contraste des blobs en mode clair
+        gradient.addColorStop(0, `rgba(120, 120, 120, ${0.3 * breathingFactor})`);
+        gradient.addColorStop(1, `rgba(160, 160, 160, ${0.2 * breathingFactor})`);
       }
 
       ctx.fillStyle = gradient;
@@ -76,8 +77,9 @@ const AnimatedBackground = ({ children, darkMode, intensity = 'medium' }) => {
         bgGradient.addColorStop(0, `rgb(${26 * breathingFactor}, ${32 * breathingFactor}, ${44 * breathingFactor})`);
         bgGradient.addColorStop(1, `rgb(${45 * breathingFactor}, ${55 * breathingFactor}, ${72 * breathingFactor})`);
       } else {
-        bgGradient.addColorStop(0, `rgb(${230 * breathingFactor}, ${255 * breathingFactor}, ${250 * breathingFactor})`);
-        bgGradient.addColorStop(1, `rgb(${178 * breathingFactor}, ${245 * breathingFactor}, ${234 * breathingFactor})`);
+        // Fond plus clair pour augmenter le contraste
+        bgGradient.addColorStop(0, `rgb(${250 * breathingFactor}, ${250 * breathingFactor}, ${250 * breathingFactor})`);
+        bgGradient.addColorStop(1, `rgb(${240 * breathingFactor}, ${240 * breathingFactor}, ${240 * breathingFactor})`);
       }
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
