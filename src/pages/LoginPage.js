@@ -68,7 +68,7 @@ const LoginPage = () => {
   } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition duration-150 ease-in-out`;
 
   return (
-    <AnimatedBackground darkMode={darkMode}>
+    <AnimatedBackground darkMode={darkMode} intensity="low">
       <div className="min-h-screen flex items-center justify-center">
         <div className={`max-w-md w-full space-y-8 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-xl shadow-lg relative z-10`}>
           <div>

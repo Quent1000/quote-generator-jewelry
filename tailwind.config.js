@@ -25,6 +25,8 @@ module.exports = {
         'spin-slow': 'spin 20s linear infinite',
         'bounce-slow': 'bounce 3s infinite',
         'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+        fade: 'fadeIn 2s ease-in-out',
+        slide: 'slideIn 2s ease-in-out',
       },
       keyframes: {
         gradient: {
@@ -48,6 +50,14 @@ module.exports = {
         pulse: {
           '0%, 100%': { opacity: 0.6 },
           '50%': { opacity: 0.8 },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideIn: {
+          '0%': { transform: 'translateY(-10%)' },
+          '100%': { transform: 'translateY(0)' },
         }
       },
       backgroundImage: {
