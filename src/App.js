@@ -12,6 +12,7 @@ import PageProfil from './pages/PageProfil';
 import PageAccesRefuse from './pages/PageAccesRefuse';
 import PageGestionUtilisateurs from './pages/PageGestionUtilisateurs';
 import withRoleAccess from './components/auth/withRoleAccess';
+import PageAccueil from './pages/PageAccueil';
 
 const App = () => {
   return (
@@ -40,7 +41,8 @@ const AppContent = () => {
       <Sidebar />
       <div className="flex-1 overflow-auto">
         <Routes>
-          <Route path="/" element={<PageTableauDeBord />} />
+          <Route path="/" element={<PageAccueil />} />
+          <Route path="/tableau-de-bord" element={<PageTableauDeBord />} />
           <Route path="/clients" element={<PageClients />} />
           <Route path="/creer-devis" element={<PageCreerDevis />} />
           <Route path="/parametrage-devis" element={<ProtectedPageParametrageDevis />} />
