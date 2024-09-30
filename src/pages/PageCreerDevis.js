@@ -583,30 +583,34 @@ const PageCreerDevis = () => {
     "4.55": 0.37
   };
 
-  useEffect(() => {
-    const fetchTauxHoraires = async () => {
-      const docRef = doc(db, 'parametresDevis', 'default');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setTauxHoraires({
-          administratif: data.tauxHoraireAdministratif || 0,
-          cao: data.tauxHoraireCAO || 0,
-          bijouterie: data.tauxHoraireBijouterie || 0,
-          polissage: data.tauxHoraireBijouterie || 0, // Utilise le même taux que bijouterie
-          dessertissage: data.tauxHoraireDesertissage || 0,
-          design: data.tauxHoraireDesign || 0,
-        });
-      }
-    };
-
-    fetchTauxHoraires();
+  // Ajoutez cette fonction pour récupérer les taux horaires
+  const fetchTauxHoraires = useCallback(async () => {
+    const docRef = doc(db, 'parametresDevis', 'default');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      setTauxHoraires({
+        administratif: data.tauxHoraireAdministratif || 0,
+        cao: data.tauxHoraireCAO || 0,
+        bijouterie: data.tauxHoraireBijouterie || 0,
+        polissage: data.tauxHoraireBijouterie || 0, // Utilise le même taux que bijouterie
+        dessertissage: data.tauxHoraireDesertissage || 0,
+        design: data.tauxHoraireDesign || 0,
+      });
+    }
   }, []);
 
-  const calculerPrix = (temps, tauxHoraire) => {
-    const heures = temps.heures + temps.minutes / 60;
-    return heures * tauxHoraire;
-  };
+  // Appelez cette fonction dans un useEffect
+  useEffect(() => {
+    fetchTauxHoraires();
+  }, [fetchTauxHoraires]);
+
+  const calculerPrix = useCallback((temps, tauxHoraire) => {
+    const heures = temps.heures || 0;
+    const minutes = temps.minutes || 0;
+    const tempsTotal = heures + minutes / 60;
+    return tempsTotal * tauxHoraire;
+  }, []);
 
   return (
     <div className={`min-h-screen ${bgClass} p-8`}>
