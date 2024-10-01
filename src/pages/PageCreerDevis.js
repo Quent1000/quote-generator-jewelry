@@ -8,7 +8,6 @@ import { XMarkIcon, ArrowUpTrayIcon, StarIcon } from '@heroicons/react/24/outlin
 import { storage } from '../firebase'; // Assurez-vous d'avoir configuré Firebase Storage
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid'; // Ajoutez cette importation en haut du fichier
-import InformationsGenerales from '../components/devis/InformationsGenerales';
 
 const CustomSelect = ({ options, value, onChange, className, darkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -1449,14 +1448,6 @@ const PageCreerDevis = () => {
           onClientAdded={handleNouveauClientAdded}
         />
       )}
-
-      <InformationsGenerales
-        devis={devis}
-        handleInputChange={handleInputChange}
-        clients={clients}
-        setShowNouveauClientPopup={setShowNouveauClientPopup}
-        darkMode={darkMode}
-      />
     </div>
   );
 };
