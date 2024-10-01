@@ -89,8 +89,7 @@ const PageCreerDevis = () => {
     tarifImpressionCire: '',
     tarifImpressionResine: '',
     couts: {
-      production: { sertissage: 0, cao: 0, bijouterie: 0 },
-      impression: { resine: 0, cire: 0, fonte: 0 }
+      impression: {}
     }
   });
 
@@ -179,6 +178,9 @@ const PageCreerDevis = () => {
   const [totalPrixDiamants, setTotalPrixDiamants] = useState(0);
   const [totalPrixSertissage, setTotalPrixSertissage] = useState(0); // Nouvel état pour le total du sertissage
 
+  const [totalPrixAutresPierres, setTotalPrixAutresPierres] = useState(0);
+  const [totalPrixSertissageAutresPierres, setTotalPrixSertissageAutresPierres] = useState(0);
+
   const calculerTotalPrixDiamants = useCallback(() => {
     const total = devis.diamants.reduce((sum, diamant) => sum + (diamant.prixTotal || 0), 0);
     setTotalPrixDiamants(total);
@@ -189,10 +191,22 @@ const PageCreerDevis = () => {
     setTotalPrixSertissage(total);
   }, [devis.diamants]);
 
+  const calculerTotalPrixAutresPierres = useCallback(() => {
+    const total = devis.autresPierres.reduce((sum, pierre) => sum + (pierre.prix * pierre.qte || 0), 0);
+    setTotalPrixAutresPierres(total);
+  }, [devis.autresPierres]);
+
+  const calculerTotalPrixSertissageAutresPierres = useCallback(() => {
+    const total = devis.autresPierres.reduce((sum, pierre) => sum + (pierre.prixSertissage || 0), 0);
+    setTotalPrixSertissageAutresPierres(total);
+  }, [devis.autresPierres]);
+
   useEffect(() => {
     calculerTotalPrixDiamants();
     calculerTotalPrixSertissage();
-  }, [calculerTotalPrixDiamants, calculerTotalPrixSertissage]);
+    calculerTotalPrixAutresPierres();
+    calculerTotalPrixSertissageAutresPierres();
+  }, [calculerTotalPrixDiamants, calculerTotalPrixSertissage, calculerTotalPrixAutresPierres, calculerTotalPrixSertissageAutresPierres]);
 
   useEffect(() => {
     console.log("Images actuelles:", images);
@@ -380,6 +394,11 @@ const PageCreerDevis = () => {
     const newDiamants = [...devis.diamants];
     newDiamants[index][field] = value;
     
+    if (field === 'taille') {
+      // Si un diamètre est sélectionné, mettre la quantité à 1
+      newDiamants[index].qte = value && value !== "Sélectionner un diamètre" ? 1 : 0;
+    }
+    
     if (field === 'taille' || field === 'qte' || field === 'fourniPar' || field === 'sertissage') {
       const tailleMm = parseFloat(newDiamants[index].taille);
       const carat = diametresEtCarats[newDiamants[index].taille] || 0;
@@ -427,16 +446,35 @@ const PageCreerDevis = () => {
 
   const handleAutresPierresChange = (index, field, value) => {
     const newAutresPierres = [...devis.autresPierres];
-    if (field === 'prix' || field === 'carat') {
-      // Permet uniquement les chiffres et un seul point décimal
-      const regex = /^\d*\.?\d*$/;
-      if (regex.test(value) || value === '') {
-        newAutresPierres[index][field] = value;
-      }
-    } else {
-      newAutresPierres[index][field] = value;
+    newAutresPierres[index][field] = value;
+    
+    if (field === 'forme') {
+      // Si une forme est sélectionnée, mettre la quantité à 1, sinon à 0
+      newAutresPierres[index].qte = value && value !== "Sélectionner une forme" ? 1 : 0;
     }
+    
+    if (field === 'forme' || field === 'qte' || field === 'fourniPar' || field === 'sertissage' || field === 'prix' || field === 'coutSertissageUnitaire') {
+      // Calculer le prix total pour cette pierre
+      if (newAutresPierres[index].fourniPar === 'Client') {
+        newAutresPierres[index].prixTotal = 0;
+      } else {
+        newAutresPierres[index].prixTotal = newAutresPierres[index].prix * newAutresPierres[index].qte;
+      }
+
+      // Réinitialiser le coût de sertissage unitaire si le type de sertissage change
+      if (field === 'sertissage') {
+        newAutresPierres[index].coutSertissageUnitaire = parametres.prixSertissage[value] || 0;
+      }
+
+      // Calculer le prix du sertissage
+      const coutSertissageUnitaire = newAutresPierres[index].coutSertissageUnitaire || 
+        (newAutresPierres[index].sertissage ? parametres.prixSertissage[newAutresPierres[index].sertissage] || 0 : 0);
+      newAutresPierres[index].prixSertissage = coutSertissageUnitaire * newAutresPierres[index].qte;
+    }
+
     setDevis(prev => ({ ...prev, autresPierres: newAutresPierres }));
+    calculerTotalPrixAutresPierres();
+    calculerTotalPrixSertissageAutresPierres();
   };
 
   const handleAddDiamant = () => {
@@ -1043,6 +1081,25 @@ const PageCreerDevis = () => {
               </select>
             </div>
             <div>
+              <label className="block mb-2">Coût sertissage unitaire</label>
+              <input
+                type="number"
+                value={pierre.coutSertissageUnitaire || 0}
+                onChange={(e) => handleAutresPierresChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
+                className={inputClass}
+                step="0.01"
+              />
+            </div>
+            <div>
+              <label className="block mb-2">Prix sertissage</label>
+              <input
+                type="text"
+                value={pierre.prixSertissage ? `${pierre.prixSertissage.toFixed(2)} €` : '0.00 €'}
+                readOnly
+                className={`${inputClass} bg-gray-100`}
+              />
+            </div>
+            <div>
               <label className="block mb-2">Fourni par</label>
               <select
                 value={pierre.fourniPar}
@@ -1054,12 +1111,13 @@ const PageCreerDevis = () => {
               </select>
             </div>
             <div>
-              <label className="block mb-2">Quantit</label>
+              <label className="block mb-2">Quantité</label>
               <input
                 type="number"
                 value={pierre.qte}
                 onChange={(e) => handleAutresPierresChange(index, 'qte', parseInt(e.target.value))}
                 className={inputClass}
+                min="0"
               />
             </div>
             <button
@@ -1076,6 +1134,26 @@ const PageCreerDevis = () => {
         >
           Ajouter une autre pierre
         </button>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <p className="font-semibold">Total prix autres pierres :</p>
+            <input
+              type="text"
+              value={`${totalPrixAutresPierres.toFixed(2)} €`}
+              readOnly
+              className={`${inputClass} bg-gray-100`}
+            />
+          </div>
+          <div>
+            <p className="font-semibold">Total prix sertissage autres pierres :</p>
+            <input
+              type="text"
+              value={`${totalPrixSertissageAutresPierres.toFixed(2)} €`}
+              readOnly
+              className={`${inputClass} bg-gray-100`}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -1370,66 +1448,6 @@ const PageCreerDevis = () => {
               />
             )}
           </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4 mb-4">
-        <div>
-          <label className="block mb-2">Coût de production - Sertissage</label>
-          <input
-            type="number"
-            value={devis.couts.production.sertissage}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, production: { ...devis.couts.production, sertissage: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">Coût de production - CAO</label>
-          <input
-            type="number"
-            value={devis.couts.production.cao}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, production: { ...devis.couts.production, cao: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">Coût de production - Bijouterie</label>
-          <input
-            type="number"
-            value={devis.couts.production.bijouterie}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, production: { ...devis.couts.production, bijouterie: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4 mb-4">
-        <div>
-          <label className="block mb-2">Coût d'impression - Résine</label>
-          <input
-            type="number"
-            value={devis.couts.impression.resine}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, impression: { ...devis.couts.impression, resine: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">Coût d'impression - Cire</label>
-          <input
-            type="number"
-            value={devis.couts.impression.cire}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, impression: { ...devis.couts.impression, cire: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block mb-2">Coût d'impression - Fonte</label>
-          <input
-            type="number"
-            value={devis.couts.impression.fonte}
-            onChange={(e) => handleInputChange('couts', { ...devis.couts, impression: { ...devis.couts.impression, fonte: parseFloat(e.target.value) } })}
-            className={inputClass}
-          />
         </div>
       </div>
 
