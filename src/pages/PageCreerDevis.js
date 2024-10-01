@@ -8,6 +8,7 @@ import { XMarkIcon, ArrowUpTrayIcon, StarIcon } from '@heroicons/react/24/outlin
 import { storage } from '../firebase'; // Assurez-vous d'avoir configuré Firebase Storage
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid'; // Ajoutez cette importation en haut du fichier
+import InformationsGenerales from '../components/devis/InformationsGenerales';
 
 const CustomSelect = ({ options, value, onChange, className, darkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -406,9 +407,18 @@ const PageCreerDevis = () => {
         newDiamants[index].prixTotal = 0;
       }
 
+      // Réinitialiser le coût de sertissage unitaire si le type de sertissage change
+      if (field === 'sertissage') {
+        newDiamants[index].coutSertissageUnitaire = parametres.prixSertissage[value] || 0;
+      }
+
       // Calculer le prix du sertissage
-      const prixSertissageUnitaire = parametres.prixSertissage[newDiamants[index].sertissage] || 0;
-      newDiamants[index].prixSertissage = prixSertissageUnitaire * newDiamants[index].qte;
+      const coutSertissageUnitaire = newDiamants[index].coutSertissageUnitaire || 
+        (newDiamants[index].sertissage ? parametres.prixSertissage[newDiamants[index].sertissage] || 0 : 0);
+      newDiamants[index].prixSertissage = coutSertissageUnitaire * newDiamants[index].qte;
+    } else if (field === 'coutSertissageUnitaire') {
+      // Si le coût de sertissage unitaire est modifié manuellement
+      newDiamants[index].prixSertissage = value * newDiamants[index].qte;
     }
 
     setDevis(prev => ({ ...prev, diamants: newDiamants }));
@@ -888,6 +898,16 @@ const PageCreerDevis = () => {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block mb-2">Coût sertissage unitaire</label>
+              <input
+                type="number"
+                value={diamant.coutSertissageUnitaire || (diamant.sertissage ? parametres.prixSertissage[diamant.sertissage] || 0 : 0)}
+                onChange={(e) => handleDiamantsChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
+                className={inputClass}
+                step="0.01"
+              />
             </div>
             <div>
               <label className="block mb-2">Prix diamants</label>
@@ -1429,6 +1449,14 @@ const PageCreerDevis = () => {
           onClientAdded={handleNouveauClientAdded}
         />
       )}
+
+      <InformationsGenerales
+        devis={devis}
+        handleInputChange={handleInputChange}
+        clients={clients}
+        setShowNouveauClientPopup={setShowNouveauClientPopup}
+        darkMode={darkMode}
+      />
     </div>
   );
 };
