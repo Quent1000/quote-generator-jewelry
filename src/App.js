@@ -13,6 +13,7 @@ import PageAccesRefuse from './pages/PageAccesRefuse';
 import PageGestionUtilisateurs from './pages/PageGestionUtilisateurs';
 import withRoleAccess from './components/auth/withRoleAccess';
 import PageAccueil from './pages/PageAccueil';
+import PageCreerDevisV2 from './pages/PageCreerDevisV2';
 
 const App = () => {
   return (
@@ -49,6 +50,7 @@ const AppContent = () => {
           <Route path="/profil" element={<PageProfil />} />
           <Route path="/acces-refuse" element={<PageAccesRefuse />} />
           <Route path="/gestion-utilisateurs" element={<ProtectedPageGestionUtilisateurs />} />
+          <Route path="/creer-devis-v2" element={<PageCreerDevisV2 />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

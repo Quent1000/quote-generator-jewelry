@@ -6,26 +6,21 @@ import { HomeIcon, UserIcon, CogIcon, DocumentTextIcon, UserGroupIcon, ChartBarI
 import logo from '../../assets/devisapp-logo.png'; // Assurez-vous que le chemin est correct
 
 const Sidebar = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = [
-    { name: 'Accueil', path: '/', icon: HomeIcon },
-    { name: 'Profil', path: '/profil', icon: UserIcon },
-    { name: 'Clients', path: '/clients', icon: UserGroupIcon },
-    { name: 'Devis', path: '/creer-devis', icon: DocumentTextIcon },
-    { name: 'Tableau de bord', path: '/tableau-de-bord', icon: ChartBarIcon },
+  const menuItems = [
+    { title: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, link: '/' },
+    { title: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, link: '/tableau-de-bord' },
+    { title: 'Clients', icon: <UserGroupIcon className="w-6 h-6" />, link: '/clients' },
+    { title: 'Créer un devis', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis' },
+    { title: 'Créer un devis (V2)', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis-v2' },
+    { title: 'Paramétrage devis', icon: <CogIcon className="w-6 h-6" />, link: '/parametrage-devis', role: 'admin' },
+    { title: 'Profil', icon: <UserIcon className="w-6 h-6" />, link: '/profil' },
+    { title: 'Gestion utilisateurs', icon: <UsersIcon className="w-6 h-6" />, link: '/gestion-utilisateurs', role: 'admin' },
   ];
-
-  // Ajouter les éléments de menu pour les administrateurs
-  if (isAdmin) {
-    navItems.push(
-      { name: 'Paramètres', path: '/parametrage-devis', icon: CogIcon },
-      { name: 'Gestion Utilisateurs', path: '/gestion-utilisateurs', icon: UsersIcon }
-    );
-  }
 
   const handleLogout = async () => {
     try {
@@ -52,20 +47,22 @@ const Sidebar = () => {
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-2 py-4">
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <Link
-                to={item.path}
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                  location.pathname === item.path
-                    ? 'bg-teal-500 text-white'
-                    : 'hover:bg-teal-100 hover:text-teal-500'
-                }`}
-              >
-                <item.icon className="mr-3 h-6 w-6" />
-                {item.name}
-              </Link>
-            </li>
+          {menuItems.map((item, index) => (
+            (!item.role || user.role === item.role) && (
+              <li key={index} className="mb-2">
+                <Link
+                  to={item.link}
+                  className={`flex items-center space-x-2 p-2 rounded transition duration-200 ${
+                    location.pathname === item.link
+                      ? 'bg-gray-700 text-white'
+                      : 'hover:bg-gray-700'
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.title}</span>
+                </Link>
+              </li>
+            )
           ))}
         </ul>
       </nav>
