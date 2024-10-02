@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import CustomSelect from './CustomSelect';
 
 const DiamantsPierres = ({ 
   devis, 
-  setDevis, 
   handleDiamantsChange, 
   handleAutresPierresChange, 
   handleAddDiamant, 
@@ -24,12 +23,15 @@ const DiamantsPierres = ({
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
   } focus:border-teal-500 focus:ring-2 focus:ring-teal-200`;
 
-  const diamantOptions = Object.keys(diametresEtCarats).map(taille => ({
-    value: taille,
-    label: `${taille} mm`
-  }));
+  const diamantOptions = [
+    { value: '', label: 'Sélectionner un diamètre' },
+    ...Object.entries(diametresEtCarats).map(([taille, carat]) => ({
+      value: taille,
+      label: `ø ${taille} mm (${carat} ct)`
+    }))
+  ];
 
-  const sertissageOptions = Object.keys(parametres.prixSertissage).map(type => ({
+  const sertissageOptions = Object.keys(parametres.prixSertissage || {}).map(type => ({
     value: type,
     label: type
   }));
@@ -38,6 +40,58 @@ const DiamantsPierres = ({
     { value: 'TGN 409', label: 'TGN 409' },
     { value: 'Client', label: 'Client' }
   ];
+
+  useEffect(() => {
+    calculerPrixDiamants();
+    calculerPrixSertissage();
+    calculerPrixAutresPierres();
+    calculerPrixSertissageAutresPierres();
+  }, [devis.diamants, devis.autresPierres, calculerPrixDiamants, calculerPrixSertissage, calculerPrixAutresPierres, calculerPrixSertissageAutresPierres]);
+
+  const handleDiamantChange = (index, field, value) => {
+    const updatedDiamant = { ...devis.diamants[index], [field]: value };
+    
+    if (field === 'taille') {
+      updatedDiamant.carat = diametresEtCarats[value] || 0;
+      updatedDiamant.prixUnitaire = parametres.prixDiamantsRonds[value] || 0;
+    }
+
+    // Calcul du prix total
+    if (updatedDiamant.fourniPar === 'Client') {
+      updatedDiamant.prixTotal = 0;
+    } else {
+      updatedDiamant.prixTotal = updatedDiamant.carat * updatedDiamant.prixUnitaire * updatedDiamant.qte * parametres.coefficientDiamantsRonds;
+    }
+
+    // Calcul du prix de sertissage
+    if (updatedDiamant.sertissage) {
+      updatedDiamant.prixSertissage = (parametres.prixSertissage[updatedDiamant.sertissage] || 0) * updatedDiamant.qte;
+    } else {
+      updatedDiamant.prixSertissage = 0;
+    }
+
+    handleDiamantsChange(index, field, value);
+  };
+
+  const handleAutrePierreChange = (index, field, value) => {
+    const updatedPierre = { ...devis.autresPierres[index], [field]: value };
+
+    // Calcul du prix total
+    if (updatedPierre.fourniPar === 'Client') {
+      updatedPierre.prixTotal = 0;
+    } else {
+      updatedPierre.prixTotal = updatedPierre.prix * updatedPierre.qte;
+    }
+
+    // Calcul du prix de sertissage
+    if (updatedPierre.sertissage) {
+      updatedPierre.prixSertissage = (parametres.prixSertissage[updatedPierre.sertissage] || 0) * updatedPierre.qte;
+    } else {
+      updatedPierre.prixSertissage = 0;
+    }
+
+    handleAutresPierresChange(index, field, value);
+  };
 
   return (
     <div>
@@ -53,7 +107,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={diamantOptions}
                 value={diamant.taille}
-                onChange={(value) => handleDiamantsChange(index, 'taille', value)}
+                onChange={(value) => handleDiamantChange(index, 'taille', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -63,7 +117,7 @@ const DiamantsPierres = ({
               <input
                 type="number"
                 value={diamant.qte}
-                onChange={(e) => handleDiamantsChange(index, 'qte', parseInt(e.target.value))}
+                onChange={(e) => handleDiamantChange(index, 'qte', parseInt(e.target.value))}
                 className={inputClass}
                 min="0"
               />
@@ -73,7 +127,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={fournisseurOptions}
                 value={diamant.fourniPar}
-                onChange={(value) => handleDiamantsChange(index, 'fourniPar', value)}
+                onChange={(value) => handleDiamantChange(index, 'fourniPar', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -83,7 +137,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={sertissageOptions}
                 value={diamant.sertissage}
-                onChange={(value) => handleDiamantsChange(index, 'sertissage', value)}
+                onChange={(value) => handleDiamantChange(index, 'sertissage', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -93,7 +147,7 @@ const DiamantsPierres = ({
               <input
                 type="number"
                 value={diamant.prixUnitaire}
-                onChange={(e) => handleDiamantsChange(index, 'prixUnitaire', parseFloat(e.target.value))}
+                onChange={(e) => handleDiamantChange(index, 'prixUnitaire', parseFloat(e.target.value))}
                 className={inputClass}
                 step="0.01"
                 readOnly={diamant.fourniPar === 'Client'}
@@ -128,8 +182,9 @@ const DiamantsPierres = ({
           </div>
         ))}
         <button
+          type="button"
           onClick={handleAddDiamant}
-          className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 transition-colors mt-2"
+          className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors mt-2"
         >
           Ajouter un diamant
         </button>
@@ -165,7 +220,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={formesPierres.map(forme => ({ value: forme, label: forme }))}
                 value={pierre.forme}
-                onChange={(value) => handleAutresPierresChange(index, 'forme', value)}
+                onChange={(value) => handleAutrePierreChange(index, 'forme', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -175,7 +230,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={typesPierres.map(type => ({ value: type, label: type }))}
                 value={pierre.type}
-                onChange={(value) => handleAutresPierresChange(index, 'type', value)}
+                onChange={(value) => handleAutrePierreChange(index, 'type', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -185,7 +240,7 @@ const DiamantsPierres = ({
               <input
                 type="text"
                 value={pierre.taille}
-                onChange={(e) => handleAutresPierresChange(index, 'taille', e.target.value)}
+                onChange={(e) => handleAutrePierreChange(index, 'taille', e.target.value)}
                 className={inputClass}
                 placeholder="ex: 5x3mm"
               />
@@ -195,7 +250,7 @@ const DiamantsPierres = ({
               <input
                 type="number"
                 value={pierre.qte}
-                onChange={(e) => handleAutresPierresChange(index, 'qte', parseInt(e.target.value))}
+                onChange={(e) => handleAutrePierreChange(index, 'qte', parseInt(e.target.value))}
                 className={inputClass}
                 min="0"
               />
@@ -205,7 +260,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={fournisseurOptions}
                 value={pierre.fourniPar}
-                onChange={(value) => handleAutresPierresChange(index, 'fourniPar', value)}
+                onChange={(value) => handleAutrePierreChange(index, 'fourniPar', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -215,7 +270,7 @@ const DiamantsPierres = ({
               <CustomSelect
                 options={sertissageOptions}
                 value={pierre.sertissage}
-                onChange={(value) => handleAutresPierresChange(index, 'sertissage', value)}
+                onChange={(value) => handleAutrePierreChange(index, 'sertissage', value)}
                 className={inputClass}
                 darkMode={darkMode}
               />
@@ -225,7 +280,7 @@ const DiamantsPierres = ({
               <input
                 type="number"
                 value={pierre.prix}
-                onChange={(e) => handleAutresPierresChange(index, 'prix', parseFloat(e.target.value))}
+                onChange={(e) => handleAutrePierreChange(index, 'prix', parseFloat(e.target.value))}
                 className={inputClass}
                 step="0.01"
                 readOnly={pierre.fourniPar === 'Client'}
@@ -260,6 +315,7 @@ const DiamantsPierres = ({
           </div>
         ))}
         <button
+          type="button"
           onClick={handleAddAutrePierre}
           className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 transition-colors mt-2"
         >

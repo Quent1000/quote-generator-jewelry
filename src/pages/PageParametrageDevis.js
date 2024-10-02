@@ -6,6 +6,18 @@ import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import withRoleAccess from '../components/auth/withRoleAccess';
 
+const getMinDiameter = (range) => {
+  if (typeof range !== 'string') return 0;
+  const parts = range.split('-');
+  return parts.length > 0 ? parseFloat(parts[0]) : 0;
+};
+
+const sortDiameterRanges = (a, b) => {
+  const minA = getMinDiameter(a);
+  const minB = getMinDiameter(b);
+  return minA - minB;
+};
+
 const PageParametrageDevis = () => {
   const { darkMode } = useAppContext();
   const [parametres, setParametres] = useState({
@@ -14,8 +26,13 @@ const PageParametrageDevis = () => {
     tauxHoraireAdministratif: 0,
     tauxHoraireDesign: 0,
     tauxHoraireDesertissage: 0,
+    margeGlobale: 0,
+    margeDiamantsRondsFournis: 0,
+    margeAutresPierresFournis: 0,
+    margeSertissage: 0,
+    margeComposants: 0,
+    margePoinconEtGravure: 0,
     prixSertissage: {},
-    coefficientDiamantsRonds: 1.15,
     prixGravure: {
       "Manuscrite": 20,
       "Bâton": 15
@@ -139,7 +156,13 @@ const PageParametrageDevis = () => {
           "DHL Express": data.prixLivraison?.["DHL Express"] || data.prixLivraison?.Express || 20,
           "Fedex": data.prixLivraison?.["Fedex"] || 25,
           "Récupération sur site": data.prixLivraison?.["Récupération sur site"] || 0
-        }
+        },
+        margeGlobale: data.margeGlobale || 0,
+        margeDiamantsRondsFournis: data.margeDiamantsRondsFournis || 0,
+        margeAutresPierresFournis: data.margeAutresPierresFournis || 0,
+        margeSertissage: data.margeSertissage || 0,
+        margeComposants: data.margeComposants || 0,
+        margePoinconEtGravure: data.margePoinconEtGravure || 0,
       });
     } else {
       // Utilisez une fonction pour obtenir les valeurs initiales
@@ -233,7 +256,7 @@ const PageParametrageDevis = () => {
   const handleInputChange = (field, value) => {
     setParametres(prev => ({
       ...prev,
-      [field]: value
+      [field]: parseFloat(value) || 0
     }));
   };
 
@@ -300,17 +323,8 @@ const PageParametrageDevis = () => {
     localStorage.setItem('selectedTabIndex', selectedIndex.toString());
   }, [selectedIndex]);
 
-  // Fonction pour trier les diamètres
-  const sortDiameterRanges = (a, b) => {
-    const getMinDiameter = (range) => {
-      const [min] = range.split('-').map(parseFloat);
-      return min;
-    };
-    return getMinDiameter(a) - getMinDiameter(b);
-  };
-
-  // Fonction pour trier les types de sertissage
-  const sortSertissageTypes = (a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' });
+  // Supprimez ou commentez la ligne suivante si vous n'utilisez pas cette fonction
+  // const sortSertissageTypes = (a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' });
 
   return (
     <div className={`container mx-auto p-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -320,7 +334,7 @@ const PageParametrageDevis = () => {
           <Tab.List className="flex p-1 space-x-1 bg-teal-900/20 rounded-xl mb-8">
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <CogIcon className="w-5 h-5 mr-2 inline-block" />
-              Taux horaires
+              Taux horaires et Marges
             </Tab>
             <Tab className={({ selected }) => (selected ? selectedTabClass : tabClass)}>
               <ScaleIcon className="w-5 h-5 mr-2 inline-block" />
@@ -345,15 +359,17 @@ const PageParametrageDevis = () => {
           </Tab.List>
           <Tab.Panels>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h3 className="text-xl font-semibold mb-4">Taux horaires</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div>
                   <label className="block mb-2">Taux horaire CAO</label>
                   <input
                     type="number"
                     name="tauxHoraireCAO"
                     value={parametres.tauxHoraireCAO}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('tauxHoraireCAO', e.target.value)}
                     className={inputClass}
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -362,8 +378,9 @@ const PageParametrageDevis = () => {
                     type="number"
                     name="tauxHoraireBijouterie"
                     value={parametres.tauxHoraireBijouterie}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('tauxHoraireBijouterie', e.target.value)}
                     className={inputClass}
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -372,8 +389,9 @@ const PageParametrageDevis = () => {
                     type="number"
                     name="tauxHoraireAdministratif"
                     value={parametres.tauxHoraireAdministratif}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('tauxHoraireAdministratif', e.target.value)}
                     className={inputClass}
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -382,8 +400,9 @@ const PageParametrageDevis = () => {
                     type="number"
                     name="tauxHoraireDesign"
                     value={parametres.tauxHoraireDesign}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('tauxHoraireDesign', e.target.value)}
                     className={inputClass}
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -392,17 +411,87 @@ const PageParametrageDevis = () => {
                     type="number"
                     name="tauxHoraireDesertissage"
                     value={parametres.tauxHoraireDesertissage}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('tauxHoraireDesertissage', e.target.value)}
                     className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-4 mt-8">Marges</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block mb-2">Marge globale (%)</label>
+                  <input
+                    type="number"
+                    name="margeGlobale"
+                    value={parametres.margeGlobale}
+                    onChange={(e) => handleInputChange('margeGlobale', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Marge diamants ronds fournis (%)</label>
+                  <input
+                    type="number"
+                    name="margeDiamantsRondsFournis"
+                    value={parametres.margeDiamantsRondsFournis}
+                    onChange={(e) => handleInputChange('margeDiamantsRondsFournis', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Marge autres pierres fournis (%)</label>
+                  <input
+                    type="number"
+                    name="margeAutresPierresFournis"
+                    value={parametres.margeAutresPierresFournis}
+                    onChange={(e) => handleInputChange('margeAutresPierresFournis', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Marge sertissage (%)</label>
+                  <input
+                    type="number"
+                    name="margeSertissage"
+                    value={parametres.margeSertissage}
+                    onChange={(e) => handleInputChange('margeSertissage', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Marge composants (%)</label>
+                  <input
+                    type="number"
+                    name="margeComposants"
+                    value={parametres.margeComposants}
+                    onChange={(e) => handleInputChange('margeComposants', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Marge poinçon et gravure (%)</label>
+                  <input
+                    type="number"
+                    name="margePoinconEtGravure"
+                    value={parametres.margePoinconEtGravure}
+                    onChange={(e) => handleInputChange('margePoinconEtGravure', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
                   />
                 </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>
+              <h3 className="text-xl font-semibold mb-4">Prix sertissage</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixSertissage || {})
-                  .sort(([a], [b]) => sortSertissageTypes(a, b))
-                  .map(([type, prix]) => (
+                {Object.entries(parametres.prixSertissage).map(([type, prix]) => (
                   <div key={type}>
                     <label className="block mb-2">{type}</label>
                     <input
@@ -410,37 +499,30 @@ const PageParametrageDevis = () => {
                       value={prix}
                       onChange={(e) => handleNestedInputChange('prixSertissage', type, e.target.value)}
                       className={inputClass}
+                      step="0.01"
                     />
                   </div>
                 ))}
               </div>
-              <div className="mt-4">
-                <label className="block mb-2">Coefficient diamants ronds (%)</label>
-                <input
-                  type="text"
-                  name="coefficientDiamantsRonds"
-                  value={parametres.coefficientDiamantsRonds}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  className={inputClass}
-                  pattern="^\d*[.,]?\d*$"
-                />
-              </div>
-              <h3 className="text-xl font-semibold mb-4 mt-8">Prix diamants ronds (€/carat)</h3>
+
+              {/* Le champ "Coefficient diamants ronds (%)" a été supprimé d'ici */}
+
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix diamants ronds</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(parametres.prixDiamantsRonds)
+                {Object.entries(parametres.prixDiamantsRonds || {})
                   .sort(([a], [b]) => sortDiameterRanges(a, b))
-                  .map(([taille, prix]) => (
-                    <div key={taille}>
-                      <label className="block mb-2">{taille}</label>
-                      <input
-                        type="number"
-                        value={prix}
-                        onChange={(e) => handleNestedInputChange('prixDiamantsRonds', taille, e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  ))}
+                  .map(([diametre, prix]) => (
+                  <div key={diametre}>
+                    <label className="block mb-2">{diametre}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixDiamantsRonds', diametre, e.target.value)}
+                      className={inputClass}
+                      step="0.01"
+                    />
+                  </div>
+                ))}
               </div>
             </Tab.Panel>
             <Tab.Panel>

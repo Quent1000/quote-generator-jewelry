@@ -39,8 +39,27 @@ const PageCreerDevisV2 = () => {
       gravureNumeroSerie: false,
       rhodiage: false
     },
-    diamants: [],
-    autresPierres: [],
+    diamants: [{
+      taille: '',
+      qte: 1,
+      fourniPar: 'TGN 409',
+      sertissage: '',
+      carat: 0,
+      prixUnitaire: 0,
+      prixTotal: 0,
+      prixSertissage: 0
+    }],
+    autresPierres: [{
+      forme: '',
+      type: '',
+      taille: '',
+      qte: 1,
+      fourniPar: 'TGN 409',
+      sertissage: '',
+      prix: 0,
+      prixTotal: 0,
+      prixSertissage: 0
+    }],
     tempsProduction: {},
     tarifFonte: '',
     tarifImpressionCire: '',
@@ -58,19 +77,33 @@ const PageCreerDevisV2 = () => {
   const [mainImageId, setMainImageId] = useState(null);
 
   const [valeurMetal, setValeurMetal] = useState(0);
-  const [totalPrixDiamants, setTotalPrixDiamants] = useState(0);
-  const [totalPrixSertissage, setTotalPrixSertissage] = useState(0);
-  const [totalPrixAutresPierres, setTotalPrixAutresPierres] = useState(0);
-  const [totalPrixSertissageAutresPierres, setTotalPrixSertissageAutresPierres] = useState(0);
   const [parametres, setParametres] = useState({
     prixSertissage: {},
     prixDiamantsRonds: {},
     coefficientDiamantsRonds: 1.15,
   });
   const [stylesGravure, setStylesGravure] = useState([]);
-  const [diametresEtCarats, setDiametresEtCarats] = useState({});
+  const [diametresEtCarats, setDiametresEtCarats] = useState({
+    "0.5": 0.00025, "0.6": 0.003, "0.7": 0.004, "0.8": 0.005, "0.9": 0.006,
+    "1.0": 0.007, "1.1": 0.008, "1.2": 0.009, "1.25": 0.01, "1.3": 0.0105,
+    "1.4": 0.012, "1.5": 0.015, "1.6": 0.02, "1.7": 0.025, "1.8": 0.028,
+    "1.9": 0.03, "2.0": 0.035, "2.1": 0.038, "2.2": 0.04, "2.3": 0.045,
+    "2.4": 0.05, "2.5": 0.06, "2.6": 0.07, "2.7": 0.08, "2.8": 0.1,
+    "2.9": 0.11, "3.0": 0.12, "3.25": 0.13, "3.3": 0.14, "3.4": 0.155,
+    "3.5": 0.17, "3.55": 0.18, "3.65": 0.19, "3.7": 0.2, "3.75": 0.21,
+    "3.8": 0.22, "3.85": 0.23, "3.9": 0.24, "3.95": 0.25, "4.0": 0.26,
+    "4.05": 0.27, "4.1": 0.28, "4.15": 0.29, "4.2": 0.3, "4.25": 0.31,
+    "4.3": 0.32, "4.35": 0.33, "4.4": 0.34, "4.45": 0.35, "4.5": 0.36,
+    "4.55": 0.37
+  });
   const [formesPierres, setFormesPierres] = useState([]);
   const [typesPierres, setTypesPierres] = useState([]);
+  const [parametresDevis, setParametresDevis] = useState({
+    prixFonte: {},
+    prixImpressionCire: {},
+    prixImpressionResine: {},
+    prixLivraison: {}
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,7 +125,10 @@ const PageCreerDevisV2 = () => {
           setMetaux(Object.entries(parametresData.prixMetaux || {}).map(([nom, prix]) => ({ nom, prix })));
           setParametres(parametresData);
           setStylesGravure(parametresData.stylesGravure || []);
-          setDiametresEtCarats(parametresData.diametresEtCarats || {});
+          setDiametresEtCarats(prevDiametres => ({
+            ...prevDiametres,
+            ...(parametresData.diametresEtCarats || {})
+          }));
           setFormesPierres(parametresData.formesPierres || []);
           setTypesPierres(parametresData.typesPierres || []);
           setCategories(parametresData.categories || []);
@@ -104,6 +140,24 @@ const PageCreerDevisV2 = () => {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchParametres = async () => {
+      const docRef = doc(db, 'parametresDevis', 'default');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setParametresDevis({
+          prixFonte: data.prixFonte || {},
+          prixImpressionCire: data.prixImpressionCire || {},
+          prixImpressionResine: data.prixImpressionResine || {},
+          prixLivraison: data.prixLivraison || {}
+        });
+      }
+    };
+
+    fetchParametres();
   }, []);
 
   useEffect(() => {
@@ -162,20 +216,7 @@ const PageCreerDevisV2 = () => {
       const newDiamants = [...prevDevis.diamants];
       newDiamants[index] = { ...newDiamants[index], [field]: value };
       
-      // Mise à jour automatique du carat et du prix
-      if (field === 'taille') {
-        newDiamants[index].carat = diametresEtCarats[value] || 0;
-        newDiamants[index].prixUnitaire = parametres.prixDiamantsRonds[value] || 0;
-      }
-
-      // Calcul du prix total
-      newDiamants[index].prixTotal = newDiamants[index].fourniPar === 'Client' ? 0 :
-        newDiamants[index].carat * newDiamants[index].prixUnitaire * newDiamants[index].qte * parametres.coefficientDiamantsRonds;
-
-      // Mise à jour du prix de sertissage
-      if (field === 'sertissage' || field === 'qte') {
-        newDiamants[index].prixSertissage = (parametres.prixSertissage[newDiamants[index].sertissage] || 0) * newDiamants[index].qte;
-      }
+      // Ajoutez ici toute logique supplémentaire nécessaire
 
       return { ...prevDevis, diamants: newDiamants };
     });
@@ -186,36 +227,28 @@ const PageCreerDevisV2 = () => {
       const newAutresPierres = [...prevDevis.autresPierres];
       newAutresPierres[index] = { ...newAutresPierres[index], [field]: value };
       
-      // Calcul du prix total
-      if (field === 'prix' || field === 'qte') {
-        newAutresPierres[index].prixTotal = newAutresPierres[index].fourniPar === 'Client' ? 0 :
-          newAutresPierres[index].prix * newAutresPierres[index].qte;
-      }
-
-      // Mise à jour du prix de sertissage
-      if (field === 'sertissage' || field === 'qte') {
-        newAutresPierres[index].prixSertissage = (parametres.prixSertissage[newAutresPierres[index].sertissage] || 0) * newAutresPierres[index].qte;
-      }
+      // Ajoutez ici toute logique supplémentaire nécessaire
 
       return { ...prevDevis, autresPierres: newAutresPierres };
     });
   };
 
-  const handleAddDiamant = () => {
+  const handleAddDiamant = useCallback((e) => {
+    if (e) e.preventDefault();
     setDevis(prev => ({
       ...prev,
-      diamants: [...prev.diamants, { 
-        taille: Object.keys(diametresEtCarats)[0] || '', 
-        qte: 1, 
-        fourniPar: 'TGN 409', 
-        sertissage: '', 
-        carat: diametresEtCarats[Object.keys(diametresEtCarats)[0]] || 0,
-        prixUnitaire: 0, 
-        prixTotal: 0, 
-        prixSertissage: 0 
+      diamants: [...prev.diamants, {
+        taille: '', // Assurez-vous que c'est une chaîne vide
+        qte: 1,
+        fourniPar: 'TGN 409',
+        sertissage: '',
+        carat: 0,
+        prixUnitaire: 0,
+        prixTotal: 0,
+        prixSertissage: 0
       }]
     }));
-  };
+  }, []);
 
   const handleRemoveDiamant = (index) => {
     setDevis(prev => ({
@@ -225,7 +258,8 @@ const PageCreerDevisV2 = () => {
   };
 
 
-  const handleAddAutrePierre = () => {
+  const handleAddAutrePierre = useCallback((e) => {
+    if (e) e.preventDefault();
     setDevis(prev => ({
       ...prev,
       autresPierres: [...prev.autresPierres, { 
@@ -240,7 +274,7 @@ const PageCreerDevisV2 = () => {
         prixSertissage: 0 
       }]
     }));
-  };
+  }, []);
 
   const handleRemoveAutrePierre = (index) => {
     setDevis(prev => ({
@@ -251,25 +285,21 @@ const PageCreerDevisV2 = () => {
 
   const calculerPrixDiamants = useCallback(() => {
     const total = devis.diamants.reduce((acc, diamant) => acc + diamant.prixTotal, 0);
-    setTotalPrixDiamants(total);
     return total;
   }, [devis.diamants]);
 
   const calculerPrixSertissage = useCallback(() => {
     const total = devis.diamants.reduce((acc, diamant) => acc + diamant.prixSertissage, 0);
-    setTotalPrixSertissage(total);
     return total;
   }, [devis.diamants]);
 
   const calculerPrixAutresPierres = useCallback(() => {
     const total = devis.autresPierres.reduce((acc, pierre) => acc + pierre.prixTotal, 0);
-    setTotalPrixAutresPierres(total);
     return total;
   }, [devis.autresPierres]);
 
   const calculerPrixSertissageAutresPierres = useCallback(() => {
     const total = devis.autresPierres.reduce((acc, pierre) => acc + pierre.prixSertissage, 0);
-    setTotalPrixSertissageAutresPierres(total);
     return total;
   }, [devis.autresPierres]);
 
@@ -366,7 +396,7 @@ const PageCreerDevisV2 = () => {
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
-    { id: 'options', label: 'Options du produit' },
+    { id: 'options', label: 'Gravure et Finition' }, // Modifié ici
     { id: 'diamants', label: 'Diamants et pierres' },
     { id: 'temps', label: 'Temps de production' },
     { id: 'tarifs', label: "Tarifs d'impression" },
@@ -406,13 +436,13 @@ const PageCreerDevisV2 = () => {
             handleOptionsChange={handleOptionsChange}
             darkMode={darkMode}
             parametres={parametres}
+            stylesGravure={stylesGravure}
           />
         );
       case 'diamants':
         return (
           <DiamantsPierres
             devis={devis}
-            setDevis={setDevis}
             handleDiamantsChange={handleDiamantsChange}
             handleAutresPierresChange={handleAutresPierresChange}
             handleAddDiamant={handleAddDiamant}
@@ -444,6 +474,7 @@ const PageCreerDevisV2 = () => {
             devis={devis}
             handleInputChange={handleInputChange}
             darkMode={darkMode}
+            parametres={parametresDevis}
           />
         );
       case 'images':
@@ -486,9 +517,10 @@ const PageCreerDevisV2 = () => {
           ))}
         </div>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => e.preventDefault()}>
         {renderTabContent()}
         <button
+          type="button"
           onClick={handleSubmit}
           className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors mt-4"
         >
