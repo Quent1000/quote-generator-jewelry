@@ -65,7 +65,7 @@ const DiamantsPierres = ({
     if (updatedDiamant.fourniPar === 'Client') {
       updatedDiamant.prixTotalDiamants = 0;
     } else {
-      updatedDiamant.prixTotalDiamants = updatedDiamant.prixUnitaire * updatedDiamant.qte;
+      updatedDiamant.prixTotalDiamants = parseFloat((updatedDiamant.prixUnitaire * updatedDiamant.qte).toFixed(2));
     }
 
     if (field === 'sertissage') {
@@ -83,25 +83,32 @@ const DiamantsPierres = ({
   };
 
   const handleAutrePierreChange = (index, field, value) => {
-    const updatedPierre = { ...devis.autresPierres[index], [field]: value };
-    
-    // Calcul du prix total
-    if (updatedPierre.fourniPar === 'Client') {
-      updatedPierre.prixTotal = 0;
-    } else {
-      updatedPierre.prixTotal = updatedPierre.prix * updatedPierre.qte;
-    }
+    let updatedValue = value;
 
+    const updatedPierre = { ...devis.autresPierres[index], [field]: updatedValue };
+    
     // Mise à jour du coût de sertissage unitaire si le type de sertissage change
     if (field === 'sertissage') {
       updatedPierre.coutSertissageUnitaire = parametres.prixSertissage[value] || 0;
+    }
+
+    // Gestion spéciale pour le champ caratage
+    if (field === 'carat') {
+      updatedPierre.carat = value.replace(',', '.');
+    }
+
+    // Calculs basés sur les valeurs mises à jour
+    if (updatedPierre.fourniPar === 'Client') {
+      updatedPierre.prixTotal = 0;
+    } else {
+      updatedPierre.prixTotal = (parseFloat(updatedPierre.prix) || 0) * (parseInt(updatedPierre.qte) || 0);
     }
 
     // Assurez-vous que le coût de sertissage unitaire est un nombre
     updatedPierre.coutSertissageUnitaire = parseFloat(updatedPierre.coutSertissageUnitaire) || 0;
 
     // Calculez le prix de sertissage, en utilisant 0 si le résultat est NaN
-    updatedPierre.prixSertissage = updatedPierre.coutSertissageUnitaire * updatedPierre.qte;
+    updatedPierre.prixSertissage = updatedPierre.coutSertissageUnitaire * (parseInt(updatedPierre.qte) || 0);
     updatedPierre.prixSertissage = isNaN(updatedPierre.prixSertissage) ? 0 : updatedPierre.prixSertissage;
 
     handleAutresPierresChange(index, updatedPierre);
@@ -201,26 +208,29 @@ const DiamantsPierres = ({
                   />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    value={diamant.coutSertissageUnitaire || 0}
-                    onChange={(e) => handleDiamantChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
-                    className={inputClass}
-                    step="0.01"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={diamant.coutSertissageUnitaire || 0}
+                      onChange={(e) => handleDiamantChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
+                      className={`${inputClass} pr-6`}
+                      step="0.01"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                  </div>
                 </td>
                 <td className="p-2">
                   <input
-                    type="number"
-                    value={diamant.prixTotalDiamants}
+                    type="text"
+                    value={`${(diamant.prixTotalDiamants || 0).toFixed(2)} €`}
                     className={autoFilledInputClass}
                     readOnly
                   />
                 </td>
                 <td className="p-2">
                   <input
-                    type="number"
-                    value={isNaN(diamant.prixSertissage) ? 0 : diamant.prixSertissage}
+                    type="text"
+                    value={`${isNaN(diamant.prixSertissage) ? '0.00' : diamant.prixSertissage.toFixed(2)} €`}
                     className={autoFilledInputClass}
                     readOnly
                   />
@@ -282,15 +292,14 @@ const DiamantsPierres = ({
         <table className="w-full">
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="p-2">Forme</th>
+              <th className="p-2 w-32">Forme</th> {/* Largeur fixe pour la colonne Forme */}
               <th className="p-2">Dimension</th>
               <th className="p-2">Type de pierres</th>
               <th className="p-2">Prix de la pierre</th>
               <th className="p-2">Caratage</th>
               <th className="p-2">Sertissage</th>
               <th className="p-2">Coût sertissage unitaire</th>
-              <th className="p-2">Prix sertissage</th>
-              <th className="p-2">Fourni par</th>
+              <th className="p-2 w-24">Fourni par</th>
               <th className="p-2">Quantité</th>
               <th className="p-2 w-16"></th>
             </tr>
@@ -306,7 +315,7 @@ const DiamantsPierres = ({
                     className={inputClass}
                     darkMode={darkMode}
                     scrollable={true}
-                    fixedWidth="200px"
+                    fixedWidth="128px" // Largeur fixe pour le CustomSelect
                   />
                 </td>
                 <td className="p-2">
@@ -330,22 +339,28 @@ const DiamantsPierres = ({
                   />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    value={pierre.prix}
-                    onChange={(e) => handleAutrePierreChange(index, 'prix', parseFloat(e.target.value))}
-                    className={inputClass}
-                    step="0.01"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={pierre.prix}
+                      onChange={(e) => handleAutrePierreChange(index, 'prix', parseFloat(e.target.value))}
+                      className={`${inputClass} pr-6`}
+                      step="0.01"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                  </div>
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    value={pierre.carat}
-                    onChange={(e) => handleAutrePierreChange(index, 'carat', parseFloat(e.target.value))}
-                    className={inputClass}
-                    step="0.01"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text" // Changé de "number" à "text"
+                      value={pierre.carat}
+                      onChange={(e) => handleAutrePierreChange(index, 'carat', e.target.value)}
+                      className={`${inputClass} pr-8`}
+                      step="0.01"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">ct</span>
+                  </div>
                 </td>
                 <td className="p-2">
                   <CustomSelect
@@ -358,21 +373,16 @@ const DiamantsPierres = ({
                   />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    value={pierre.coutSertissageUnitaire || 0}
-                    onChange={(e) => handleAutrePierreChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
-                    className={inputClass}
-                    step="0.01"
-                  />
-                </td>
-                <td className="p-2">
-                  <input
-                    type="number"
-                    value={isNaN(pierre.prixSertissage) ? 0 : pierre.prixSertissage}
-                    className={autoFilledInputClass}
-                    readOnly
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={pierre.coutSertissageUnitaire || 0}
+                      onChange={(e) => handleAutrePierreChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
+                      className={`${inputClass} pr-6`}
+                      step="0.01"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                  </div>
                 </td>
                 <td className="p-2">
                   <CustomSelect
@@ -381,7 +391,7 @@ const DiamantsPierres = ({
                     onChange={(value) => handleAutrePierreChange(index, 'fourniPar', value)}
                     className={inputClass}
                     darkMode={darkMode}
-                    fixedWidth="200px"
+                    fixedWidth="100%" // Utiliser 100% de la largeur de la cellule
                   />
                 </td>
                 <td className="p-2">

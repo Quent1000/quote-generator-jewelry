@@ -1,8 +1,17 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
 
-const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, categories, sousCategories, metaux, valeurMetal }) => {
-  console.log("Métaux reçus dans InformationsEtDetails:", metaux);
+const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal }) => {
+  console.log("Clients reçus dans InformationsEtDetails:", clients);
+
+  const categories = {
+    "Bague": ["Alliance", "Bague de fiançailles", "Chevalière", "Solitaire", "Autre"],
+    "Bracelet": ["Jonc", "Chaîne", "Manchette", "Tennis", "Autre"],
+    "Boucles d'oreilles": ["Créoles", "Puces", "Pendantes", "Chandelier", "Autre"],
+    "Pendentif": ["Simple", "Avec chaîne", "Médaillon", "Autre"],
+    "Collier": ["Chaîne", "Ras de cou", "Sautoir", "Autre"],
+    "Autre": ["Préciser"]
+  };
 
   const inputClass = `w-full p-2 border rounded ${
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
@@ -12,13 +21,23 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     { value: '', label: 'Sélectionnez un client' },
     ...clients.map(client => ({
       value: client.id,
-      label: `${client.informationsPersonnelles.nom} ${client.informationsPersonnelles.prenom}`
+      label: `${client.informationsPersonnelles.nom} ${client.informationsPersonnelles.prenom}`.trim()
     })),
     { value: 'nouveau', label: '+ Créer un nouveau client' }
   ];
 
-  const categorieOptions = categories.map(cat => ({ value: cat, label: cat }));
-  const sousCategorieOptions = sousCategories.map(subCat => ({ value: subCat, label: subCat }));
+  console.log("Options clients finales:", clientOptions);
+
+  // Fonction pour trouver le label du client sélectionné
+  const getSelectedClientLabel = () => {
+    const selectedClient = clientOptions.find(option => option.value === devis.client);
+    return selectedClient ? selectedClient.label : '';
+  };
+
+  const categorieOptions = Object.keys(categories).map(cat => ({ value: cat, label: cat }));
+  const sousCategorieOptions = devis.categorie && categories[devis.categorie]
+    ? categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
+    : [];
   const metalOptions = metaux.map(metal => ({
     value: metal.nom,
     label: `${metal.nom} - ${(metal.prix / 1000).toFixed(2)}€/g`
@@ -37,6 +56,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
               onChange={handleClientChange}
               className={inputClass}
               darkMode={darkMode}
+              displayValue={getSelectedClientLabel()}
             />
           </div>
           <div>

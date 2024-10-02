@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const CustomSelect = ({ options, value, onChange, className, darkMode, scrollable, width, fixedWidth }) => {
+const CustomSelect = ({ options, value, onChange, className, darkMode, scrollable, width, fixedWidth, displayValue }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef(null);
 
@@ -42,7 +42,7 @@ const CustomSelect = ({ options, value, onChange, className, darkMode, scrollabl
         }`}
         onClick={handleToggle}
       >
-        <span className="truncate">{value || "Sélectionnez une option"}</span>
+        <span className="truncate">{displayValue || value || "Sélectionnez une option"}</span>
         <span className="ml-2">▼</span>
       </div>
       {isOpen && (

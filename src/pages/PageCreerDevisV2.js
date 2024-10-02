@@ -18,7 +18,6 @@ import ImagesDevis from '../components/devis/ImagesDevis';
 const PageCreerDevisV2 = () => {
   const { darkMode } = useAppContext();
   const [activeTab, setActiveTab] = useState(() => {
-    // Récupérer l'onglet actif depuis localStorage, ou utiliser 'informations' par défaut
     return localStorage.getItem('activeDevisTab') || 'informations';
   });
   const [showNouveauClientPopup, setShowNouveauClientPopup] = useState(false);
@@ -73,9 +72,7 @@ const PageCreerDevisV2 = () => {
 
 
   const [clients, setClients] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [metaux, setMetaux] = useState([]);
-  const [sousCategories, setSousCategories] = useState([]);
   const [images, setImages] = useState([]);
   const [mainImageId, setMainImageId] = useState(null);
 
@@ -147,8 +144,6 @@ const PageCreerDevisV2 = () => {
           if (parametresData.formesPierres && parametresData.formesPierres.length > 0) {
             setFormesPierres(parametresData.formesPierres);
           }
-          setCategories(parametresData.categories || []);
-          setSousCategories(parametresData.sousCategories || []);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des données:", error);
@@ -177,14 +172,6 @@ const PageCreerDevisV2 = () => {
   }, []);
 
   useEffect(() => {
-    if (devis.categorie && categories[devis.categorie]) {
-      setSousCategories(categories[devis.categorie]);
-    } else {
-      setSousCategories([]);
-    }
-  }, [devis.categorie, categories]);
-
-  useEffect(() => {
     if (devis.metal && devis.poidsEstime) {
       const metalSelectionne = metaux.find(m => m.nom === devis.metal);
       if (metalSelectionne) {
@@ -201,7 +188,6 @@ const PageCreerDevisV2 = () => {
       
       if (field === 'categorie') {
         newDevis.sousCategorie = '';
-        setSousCategories(categories[value] || []);
       }
       
       if (field === 'metal' || field === 'poidsEstime') {
@@ -410,7 +396,7 @@ const PageCreerDevisV2 = () => {
         imageprincipale: imageUrls[mainImageId] // L'image principale
       };
 
-      console.log("Devis à envoyer:", newDevis); // Ajoutez cette ligne pour déboguer
+      console.log("Devis  envoyer:", newDevis); // Ajoutez cette ligne pour déboguer
 
       // Ajouter le devis à Firestore
       const docRef = await addDoc(collection(db, 'devis'), newDevis);
@@ -460,8 +446,6 @@ const PageCreerDevisV2 = () => {
             setShowNouveauClientPopup={setShowNouveauClientPopup}
             darkMode={darkMode}
             clients={clients}
-            categories={Object.keys(categories)}
-            sousCategories={sousCategories}
             metaux={metaux}
             valeurMetal={valeurMetal}
           />
@@ -535,7 +519,7 @@ const PageCreerDevisV2 = () => {
   };
 
   return (
-    <div className={`p-6 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'}`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
       <h1 className="text-2xl font-bold mb-6">Créer un nouveau devis (V2)</h1>
       <div className="mb-6">
         <div className="flex border-b">
