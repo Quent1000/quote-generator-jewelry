@@ -17,7 +17,10 @@ import ImagesDevis from '../components/devis/ImagesDevis';
 
 const PageCreerDevisV2 = () => {
   const { darkMode } = useAppContext();
-  const [activeTab, setActiveTab] = useState('informations');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Récupérer l'onglet actif depuis localStorage, ou utiliser 'informations' par défaut
+    return localStorage.getItem('activeDevisTab') || 'informations';
+  });
   const [showNouveauClientPopup, setShowNouveauClientPopup] = useState(false);
   const [devis, setDevis] = useState({
     client: '',
@@ -96,8 +99,20 @@ const PageCreerDevisV2 = () => {
     "4.3": 0.32, "4.35": 0.33, "4.4": 0.34, "4.45": 0.35, "4.5": 0.36,
     "4.55": 0.37
   });
-  const [formesPierres, setFormesPierres] = useState([]);
-  const [typesPierres, setTypesPierres] = useState([]);
+  const [formesPierres, setFormesPierres] = useState([
+    "Rond",
+    "Ovale",
+    "Poire",
+    "Coussin",
+    "Marquise",
+    "Émeraude",
+    "Princesse",
+    "Asscher",
+    "Cœur",
+    "Trillion",
+    "Radiant",
+    "Baguette"
+  ]);
   const [parametresDevis, setParametresDevis] = useState({
     prixFonte: {},
     prixImpressionCire: {},
@@ -129,8 +144,9 @@ const PageCreerDevisV2 = () => {
             ...prevDiametres,
             ...(parametresData.diametresEtCarats || {})
           }));
-          setFormesPierres(parametresData.formesPierres || []);
-          setTypesPierres(parametresData.typesPierres || []);
+          if (parametresData.formesPierres && parametresData.formesPierres.length > 0) {
+            setFormesPierres(parametresData.formesPierres);
+          }
           setCategories(parametresData.categories || []);
           setSousCategories(parametresData.sousCategories || []);
         }
@@ -211,24 +227,33 @@ const PageCreerDevisV2 = () => {
     }));
   };
 
-  const handleDiamantsChange = (index, field, value) => {
+  const handleDiamantChange = (index, field, value) => {
     setDevis(prevDevis => {
       const newDiamants = [...prevDevis.diamants];
-      newDiamants[index] = { ...newDiamants[index], [field]: value };
+      if (field === 'diamant') {
+        newDiamants[index] = value;
+      } else {
+        newDiamants[index] = { ...newDiamants[index], [field]: value };
+      }
       
-      // Ajoutez ici toute logique supplémentaire nécessaire
+      // Recalculer prixTotalDiamants
+      const diamant = newDiamants[index];
+      if (diamant.fourniPar === 'Client') {
+        diamant.prixTotalDiamants = 0;
+      } else {
+        const prixUnitaire = parseFloat(diamant.prixUnitaire) || 0;
+        const quantite = parseInt(diamant.qte) || 0;
+        diamant.prixTotalDiamants = prixUnitaire * quantite;
+      }
 
       return { ...prevDevis, diamants: newDiamants };
     });
   };
 
-  const handleAutresPierresChange = (index, field, value) => {
+  const handleAutresPierresChange = (index, updatedPierre) => {
     setDevis(prevDevis => {
       const newAutresPierres = [...prevDevis.autresPierres];
-      newAutresPierres[index] = { ...newAutresPierres[index], [field]: value };
-      
-      // Ajoutez ici toute logique supplémentaire nécessaire
-
+      newAutresPierres[index] = updatedPierre;
       return { ...prevDevis, autresPierres: newAutresPierres };
     });
   };
@@ -238,14 +263,15 @@ const PageCreerDevisV2 = () => {
     setDevis(prev => ({
       ...prev,
       diamants: [...prev.diamants, {
-        taille: '', // Assurez-vous que c'est une chaîne vide
+        taille: '',
         qte: 1,
         fourniPar: 'TGN 409',
         sertissage: '',
         carat: 0,
         prixUnitaire: 0,
-        prixTotal: 0,
-        prixSertissage: 0
+        prixTotalDiamants: 0,
+        prixSertissage: 0,
+        coutSertissageUnitaire: 0
       }]
     }));
   }, []);
@@ -284,8 +310,11 @@ const PageCreerDevisV2 = () => {
   };
 
   const calculerPrixDiamants = useCallback(() => {
-    const total = devis.diamants.reduce((acc, diamant) => acc + diamant.prixTotal, 0);
-    return total;
+    const total = devis.diamants.reduce((acc, diamant) => {
+      const prixTotal = parseFloat(diamant.prixTotalDiamants) || 0;
+      return acc + prixTotal;
+    }, 0);
+    return isNaN(total) ? 0 : total;
   }, [devis.diamants]);
 
   const calculerPrixSertissage = useCallback(() => {
@@ -411,6 +440,15 @@ const PageCreerDevisV2 = () => {
     }
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+  };
+
+  // Ajouter cet useEffect pour sauvegarder l'onglet actif dans localStorage
+  useEffect(() => {
+    localStorage.setItem('activeDevisTab', activeTab);
+  }, [activeTab]);
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'informations':
@@ -443,7 +481,7 @@ const PageCreerDevisV2 = () => {
         return (
           <DiamantsPierres
             devis={devis}
-            handleDiamantsChange={handleDiamantsChange}
+            handleDiamantsChange={handleDiamantChange}
             handleAutresPierresChange={handleAutresPierresChange}
             handleAddDiamant={handleAddDiamant}
             handleRemoveDiamant={handleRemoveDiamant}
@@ -456,7 +494,6 @@ const PageCreerDevisV2 = () => {
             darkMode={darkMode}
             diametresEtCarats={diametresEtCarats}
             formesPierres={formesPierres}
-            typesPierres={typesPierres}
             parametres={parametres}
           />
         );
@@ -510,7 +547,7 @@ const PageCreerDevisV2 = () => {
                   ? 'border-b-2 border-teal-500 font-medium'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>
