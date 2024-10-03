@@ -1,5 +1,6 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
+import CustomClientSelect from './CustomClientSelect';
 
 const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal, onMetalChange, isOrGrisSelected }) => {
   const categories = {
@@ -15,19 +16,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
   } focus:border-teal-500 focus:ring-2 focus:ring-teal-200`;
 
-  const clientOptions = [
-    { value: '', label: 'Sélectionnez un client' },
-    ...clients.map(client => ({
-      value: client.id,
-      label: `${client.informationsPersonnelles.nom} ${client.informationsPersonnelles.prenom}`.trim()
-    })),
-    { value: 'nouveau', label: '+ Créer un nouveau client' }
-  ];
-
-  const getSelectedClientLabel = () => {
-    const selectedClient = clientOptions.find(option => option.value === devis.client);
-    return selectedClient ? selectedClient.label : '';
-  };
+  // La variable clientOptions a été supprimée car elle n'était pas utilisée
 
   const categorieOptions = Object.keys(categories).map(cat => ({ value: cat, label: cat }));
   const sousCategorieOptions = devis.categorie && categories[devis.categorie]
@@ -68,8 +57,20 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
 
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Informations et Détails du Devis</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Informations et détails</h2>
       
+      {devis.numeroDevis && (
+        <div className="mb-4">
+          <label className="block mb-2 font-semibold">Numéro de devis</label>
+          <input
+            type="text"
+            value={devis.numeroDevis}
+            readOnly
+            className={`${inputClass} bg-gray-100`}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-4 gap-4 mb-4">
         {renderOption("Titre du devis", (
           <input
@@ -81,19 +82,13 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
           />
         ))}
         {renderOption("Client", (
-          <CustomSelect
-            options={clientOptions}
+          <CustomClientSelect
+            clients={clients}
             value={devis.client}
-            onChange={(value) => {
-              if (value === 'nouveau') {
-                setShowNouveauClientPopup(true);
-              } else {
-                handleClientChange(value);
-              }
-            }}
+            onChange={handleClientChange}
             className={inputClass}
             darkMode={darkMode}
-            displayValue={getSelectedClientLabel()}
+            setShowNouveauClientPopup={setShowNouveauClientPopup}
           />
         ))}
         {renderOption("Catégorie", (

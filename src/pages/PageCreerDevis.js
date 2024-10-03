@@ -8,6 +8,7 @@ import { XMarkIcon, ArrowUpTrayIcon, StarIcon } from '@heroicons/react/24/outlin
 import { storage } from '../firebase'; // Assurez-vous d'avoir configuré Firebase Storage
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid'; // Ajoutez cette importation en haut du fichier
+import { getNextDevisNumber } from '../firebase';
 
 const CustomSelect = ({ options, value, onChange, className, darkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,11 +58,12 @@ const PageCreerDevis = () => {
   const [clients, setClients] = useState([]);
   const [showNouveauClientPopup, setShowNouveauClientPopup] = useState(false);
   const [devis, setDevis] = useState({
+    numeroDevis: '',
     client: '',
+    titreDevis: '',
     categorie: '',
     sousCategorie: '',
     metal: '',
-    titreDevis: '',
     taille: '',
     poidsEstime: '',
     description: '',
@@ -507,23 +509,19 @@ const PageCreerDevis = () => {
 
   const handleSubmit = async () => {
     try {
-      // Upload des images
-      const imageUrls = await Promise.all(images.map(uploadImage));
-      
-      // Créer le devis avec les URLs des images
-      const newDevis = {
+      const devisNumber = await getNextDevisNumber();
+      const devisData = {
         ...devis,
-        images: imageUrls,
-        imageprincipale: imageUrls[0] // La première image est l'image principale
+        numeroDevis: `DEV-${devisNumber.toString().padStart(5, '0')}`,
+        dateCreation: new Date().toISOString(),
+        // ... autres champs du devis ...
       };
 
-      // Ajouter le devis à Firestore
-      await addDoc(collection(db, 'devis'), newDevis);
-      alert('Devis créé avec succès !');
-      // Réinitialiser le formulaire ou rediriger
+      const docRef = await addDoc(collection(db, 'devis'), devisData);
+      console.log("Devis créé avec l'ID: ", docRef.id);
+      // ... reste du code de soumission ...
     } catch (error) {
-      console.error("Erreur lors de la création du devis :", error);
-      alert('Une erreur est survenue lors de la création du devis.');
+      console.error("Erreur lors de la création du devis: ", error);
     }
   };
 

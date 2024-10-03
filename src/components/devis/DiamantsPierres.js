@@ -115,8 +115,8 @@ const DiamantsPierres = ({
   };
 
   // Ajoutez cette vérification
-  const formesOptions = [
-    { value: '', label: 'Sélectionner une forme' },
+  const formePierreOptions = [
+    { value: '', label: 'Sélectionner' },
     ...formesPierres.map(forme => ({ value: forme, label: forme }))
   ];
 
@@ -310,14 +310,13 @@ const DiamantsPierres = ({
                 <tr key={index} className="border-b dark:border-gray-700">
                   <td className="p-2">
                     <CustomSelect
-                      options={formesOptions}
+                      options={formePierreOptions}
                       value={pierre.forme}
                       onChange={(value) => handleAutrePierreChange(index, 'forme', value)}
                       className={inputClass}
                       darkMode={darkMode}
                       isScrollable={true}
-                      maxHeight={200}
-                      fixedWidth="100%"
+                      maxHeight={300}
                     />
                   </td>
                   <td className="p-2">

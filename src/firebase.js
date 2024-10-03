@@ -4,6 +4,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth"; // Ajoutez cette ligne
+import { doc, getDoc, setDoc, increment } from 'firebase/firestore'; // Ajout de la fonction pour le compteur de devis
 
 // Configuration de votre application Firebase
 const firebaseConfig = {
@@ -33,3 +34,18 @@ const auth = getAuth(app); // Ajoutez cette ligne
 
 // Export des éléments nécessaires
 export { app, db, storage, analytics, auth }; // Ajoutez auth à l'export
+
+export const getNextDevisNumber = async () => {
+  const counterRef = doc(db, 'counters', 'devis');
+  const counterSnap = await getDoc(counterRef);
+  
+  if (!counterSnap.exists()) {
+    // Initialiser le compteur s'il n'existe pas
+    await setDoc(counterRef, { count: 1 });
+    return 1;
+  } else {
+    // Incrémenter le compteur
+    await setDoc(counterRef, { count: increment(1) }, { merge: true });
+    return counterSnap.data().count + 1;
+  }
+};

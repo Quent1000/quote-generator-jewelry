@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { db, storage } from '../firebase';
+import { db, storage, getNextDevisNumber } from '../firebase';  // Ajoutez getNextDevisNumber ici
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useDropzone } from 'react-dropzone';
 import NouveauClientPopup from '../components/clients/NouveauClientPopup';
 import DiamantsPierres from '../components/devis/DiamantsPierres';
+import ComposantsEtAutres from '../components/devis/ComposantsEtAutres'; // Ajoutez cette ligne
 
 // Importation des composants
 import InformationsEtDetails from '../components/devis/InformationsEtDetails';
@@ -132,6 +133,9 @@ const PageCreerDevisV2 = () => {
     design: 0,
   });
   const [isOrGrisSelected, setIsOrGrisSelected] = useState(false);
+
+  // Ajoutez cet état pour stocker le numéro de devis
+  const [devisNumber, setDevisNumber] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -417,21 +421,20 @@ const PageCreerDevisV2 = () => {
     e.preventDefault();
     try {
       validateDevis();
-      // Upload des images
-      const imageUrls = await Promise.all(images.map(async (image) => {
-        const imageRef = ref(storage, `devis_images/${image.id}`);
-        await uploadBytes(imageRef, image.file);
-        return getDownloadURL(imageRef);
-      }));
+      const imageUrls = await Promise.all(images.map(uploadImage));
       
-      // Créer le devis avec les URLs des images
+      const newDevisNumber = await getNextDevisNumber();
+      setDevisNumber(newDevisNumber); // Mettez à jour l'état avec le nouveau numéro de devis
+      
       const newDevis = {
         ...devis,
+        numeroDevis: `DEV-${newDevisNumber.toString().padStart(5, '0')}`,
+        dateCreation: new Date().toISOString(),
         images: imageUrls,
-        imageprincipale: imageUrls[mainImageId] // L'image principale
+        imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null
       };
 
-      console.log("Devis  envoyer:", newDevis); // Ajoutez cette ligne pour déboguer
+      console.log("Devis à envoyer:", newDevis);
 
       // Ajouter le devis à Firestore
       const docRef = await addDoc(collection(db, 'devis'), newDevis);
@@ -446,10 +449,11 @@ const PageCreerDevisV2 = () => {
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
-    { id: 'tarifs', label: "Tarifs d'impression" },
-    { id: 'diamants', label: 'Diamants et pierres' },
+    { id: 'options', label: 'Options du produit' },
     { id: 'temps', label: 'Temps de production' },
-    { id: 'options', label: 'Gravure et Finition' },
+    { id: 'diamants', label: 'Diamants et pierres' },
+    { id: 'tarifs', label: "Tarifs d'impression" },
+    { id: 'composants', label: 'Composants et autres' }, // Nouvel onglet
     { id: 'images', label: 'Images' },
   ];
 
@@ -553,6 +557,14 @@ const PageCreerDevisV2 = () => {
             defaultRhodiage={isOrGrisSelected}
           />
         );
+      case 'composants':
+        return (
+          <ComposantsEtAutres
+            devis={devis}
+            handleInputChange={handleInputChange}
+            darkMode={darkMode}
+          />
+        );
       case 'images':
         return (
           <ImagesDevis
@@ -573,9 +585,19 @@ const PageCreerDevisV2 = () => {
     }
   };
 
+  const uploadImage = async (image) => {
+    const storageRef = ref(storage, `devis_images/${image.id}`);
+    await uploadBytes(storageRef, image.file);
+    return await getDownloadURL(storageRef);
+  };
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
-      <h1 className="text-2xl font-bold mb-6">Créer un nouveau devis (V2)</h1>
+      <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
+        {devisNumber 
+          ? `Devis n° DEV-${devisNumber.toString().padStart(5, '0')}` 
+          : "Nouveau devis"}
+      </h1>
       <div className="mb-6">
         <div className="flex border-b">
           {tabs.map((tab) => (
