@@ -62,7 +62,14 @@ const PageCreerDevisV2 = () => {
       prixTotal: 0,
       prixSertissage: 0
     }],
-    tempsProduction: {},
+    tempsProduction: {
+      administratif: { heures: 0, minutes: 0 },
+      cao: { heures: 0, minutes: 0 },
+      bijouterie: { heures: 0, minutes: 0 },
+      polissage: { heures: 0, minutes: 0 },
+      dessertissage: { heures: 0, minutes: 0 },
+      design: { heures: 0, minutes: 0 },
+    },
     tarifFonte: '',
     tarifImpressionCire: '',
     tarifImpressionResine: '',
@@ -116,6 +123,15 @@ const PageCreerDevisV2 = () => {
     prixImpressionResine: {},
     prixLivraison: {}
   });
+  const [tauxHoraires, setTauxHoraires] = useState({
+    administratif: 0,
+    cao: 0,
+    bijouterie: 0,
+    polissage: 0,
+    dessertissage: 0,
+    design: 0,
+  });
+  const [isOrGrisSelected, setIsOrGrisSelected] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -182,23 +198,38 @@ const PageCreerDevisV2 = () => {
     }
   }, [devis.metal, devis.poidsEstime, metaux]);
 
+  useEffect(() => {
+    const fetchTauxHoraires = async () => {
+      const docRef = doc(db, 'parametresDevis', 'default');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTauxHoraires({
+          administratif: data.tauxHoraireAdministratif || 0,
+          cao: data.tauxHoraireCAO || 0,
+          bijouterie: data.tauxHoraireBijouterie || 0,
+          polissage: data.tauxHoraireBijouterie || 0, // Utilise le même taux que bijouterie
+          dessertissage: data.tauxHoraireDesertissage || 0,
+          design: data.tauxHoraireDesign || 0,
+        });
+      }
+    };
+
+    fetchTauxHoraires();
+  }, []);
+
   const handleInputChange = (field, value) => {
     setDevis(prevDevis => {
-      const newDevis = { ...prevDevis, [field]: value };
-      
-      if (field === 'categorie') {
-        newDevis.sousCategorie = '';
-      }
-      
-      if (field === 'metal' || field === 'poidsEstime') {
-        const metalSelectionne = metaux.find(m => m.nom === newDevis.metal);
-        if (metalSelectionne && newDevis.poidsEstime) {
-          setValeurMetal((metalSelectionne.prix * parseFloat(newDevis.poidsEstime) / 1000).toFixed(2));
-        } else {
-          setValeurMetal(0);
+      const newDevis = { ...prevDevis };
+      const fields = field.split('.');
+      let current = newDevis;
+      for (let i = 0; i < fields.length - 1; i++) {
+        if (!current[fields[i]]) {
+          current[fields[i]] = {};
         }
+        current = current[fields[i]];
       }
-      
+      current[fields[fields.length - 1]] = value;
       return newDevis;
     });
   };
@@ -349,8 +380,9 @@ const PageCreerDevisV2 = () => {
     }
   };
 
-  const setAsMainImage = (id) => {
-    setMainImageId(id);
+  const setMainImage = (imageId) => {
+    console.log("Changement d'image principale. Nouvel ID:", imageId);
+    setMainImageId(imageId);
   };
 
   const handlePaste = (event) => {
@@ -411,10 +443,10 @@ const PageCreerDevisV2 = () => {
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
-    { id: 'options', label: 'Gravure et Finition' }, // Modifié ici
+    { id: 'tarifs', label: "Tarifs d'impression" },
     { id: 'diamants', label: 'Diamants et pierres' },
     { id: 'temps', label: 'Temps de production' },
-    { id: 'tarifs', label: "Tarifs d'impression" },
+    { id: 'options', label: 'Gravure et Finition' },
     { id: 'images', label: 'Images' },
   ];
 
@@ -435,6 +467,10 @@ const PageCreerDevisV2 = () => {
     localStorage.setItem('activeDevisTab', activeTab);
   }, [activeTab]);
 
+  const handleMetalChange = useCallback((metalValue) => {
+    setIsOrGrisSelected(metalValue.toLowerCase().includes('or gris'));
+  }, []);
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'informations':
@@ -448,17 +484,16 @@ const PageCreerDevisV2 = () => {
             clients={clients}
             metaux={metaux}
             valeurMetal={valeurMetal}
+            onMetalChange={handleMetalChange}
           />
         );
-      case 'options':
+      case 'tarifs':
         return (
-          <OptionsProduit
+          <TarifsImpression
             devis={devis}
             handleInputChange={handleInputChange}
-            handleOptionsChange={handleOptionsChange}
             darkMode={darkMode}
-            parametres={parametres}
-            stylesGravure={stylesGravure}
+            parametres={parametresDevis}
           />
         );
       case 'diamants':
@@ -487,30 +522,34 @@ const PageCreerDevisV2 = () => {
             devis={devis}
             handleInputChange={handleInputChange}
             darkMode={darkMode}
+            tauxHoraires={tauxHoraires}
           />
         );
-      case 'tarifs':
+      case 'options':
         return (
-          <TarifsImpression
+          <OptionsProduit
             devis={devis}
             handleInputChange={handleInputChange}
+            handleOptionsChange={handleOptionsChange}
             darkMode={darkMode}
-            parametres={parametresDevis}
+            parametres={parametres}
+            stylesGravure={stylesGravure}  // Passez stylesGravure ici
+            defaultRhodiage={isOrGrisSelected}
           />
         );
       case 'images':
         return (
           <ImagesDevis
             images={images}
-            mainImageId={mainImageId}
             onDrop={onDrop}
             removeImage={removeImage}
-            setAsMainImage={setAsMainImage}
+            setMainImage={setMainImage}  // Utilisez setMainImage ici
+            mainImageId={mainImageId}
+            darkMode={darkMode}
             getRootProps={getRootProps}
             getInputProps={getInputProps}
             isDragActive={isDragActive}
             handlePaste={handlePaste}
-            darkMode={darkMode}
           />
         );
       default:

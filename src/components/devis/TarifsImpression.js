@@ -6,70 +6,124 @@ const TarifsImpression = ({ devis, handleInputChange, darkMode, parametres }) =>
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
   } focus:border-teal-500 focus:ring-2 focus:ring-teal-200`;
 
-  const renderTarifSelect = (field, options) => (
-    <div className="flex items-center space-x-2">
-      <select
-        value={devis[field] || ''}
-        onChange={(e) => {
-          if (e.target.value === 'custom') {
-            handleInputChange(field, 'custom');
-          } else {
-            handleInputChange(field, e.target.value);
-          }
-        }}
-        className={`${inputClass} flex-grow`}
-      >
-        <option value="">Sélectionnez un tarif</option>
-        {Object.entries(options).map(([key, value]) => (
-          <option key={key} value={value}>{`${key} - ${value}€`}</option>
-        ))}
-        <option value="custom">Tarif personnalisé</option>
-      </select>
-      {devis[field] === 'custom' && (
-        <input
-          type="number"
-          value={devis[`${field}Custom`] || ''}
-          onChange={(e) => handleInputChange(`${field}Custom`, e.target.value)}
-          placeholder="Tarif libre"
-          className={`${inputClass} w-24`}
-          step="0.01"
-        />
-      )}
+  const renderOption = (label, content) => (
+    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <label className="block mb-2 font-semibold text-gray-700 dark:text-gray-300">{label}</label>
+      {content}
     </div>
   );
 
+  const renderTarifSelect = (field, options) => (
+    <CustomSelect
+      options={[
+        { value: '', label: 'Sélectionnez un tarif' },
+        ...Object.entries(options).map(([key, value]) => ({ 
+          value: value.toString(), 
+          label: `${key} - ${value}€` 
+        })),
+        { value: 'custom', label: 'Tarif personnalisé' }
+      ]}
+      value={devis[field] || ''}
+      onChange={(value) => {
+        if (value === 'custom') {
+          handleInputChange(field, 'custom');
+        } else {
+          handleInputChange(field, value);
+        }
+      }}
+      className={inputClass}
+      darkMode={darkMode}
+    />
+  );
+
+  const calculerTotal = () => {
+    let total = 0;
+    
+    // Tarif fonte
+    total += devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
+    
+    // Tarif impression cire
+    total += devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
+    
+    // Tarif impression résine
+    total += devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+    
+    // Prix livraison
+    total += parseFloat(devis.prixLivraison || 0);
+    
+    return total;
+  };
+
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Tarifs d'impression</h2>
-      <div className="grid grid-cols-1 gap-4 mb-4">
-        <div>
-          <label className="block mb-2">Tarif fonte</label>
-          {renderTarifSelect('tarifFonte', parametres.prixFonte)}
-        </div>
-        <div>
-          <label className="block mb-2">Tarif impression cire</label>
-          {renderTarifSelect('tarifImpressionCire', parametres.prixImpressionCire)}
-        </div>
-        <div>
-          <label className="block mb-2">Tarif impression résine</label>
-          {renderTarifSelect('tarifImpressionResine', parametres.prixImpressionResine)}
-        </div>
+    <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Tarifs d'impression et livraison</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {renderOption("Tarif fonte", (
+          <>
+            {renderTarifSelect('tarifFonte', parametres.prixFonte)}
+            {devis.tarifFonte === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifFonteCustom || ''}
+                onChange={(e) => handleInputChange('tarifFonteCustom', e.target.value)}
+                placeholder="Tarif personnalisé"
+                className={`${inputClass} mt-2`}
+                step="0.01"
+              />
+            )}
+          </>
+        ))}
+        {renderOption("Tarif impression cire", (
+          <>
+            {renderTarifSelect('tarifImpressionCire', parametres.prixImpressionCire)}
+            {devis.tarifImpressionCire === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifImpressionCireCustom || ''}
+                onChange={(e) => handleInputChange('tarifImpressionCireCustom', e.target.value)}
+                placeholder="Tarif personnalisé"
+                className={`${inputClass} mt-2`}
+                step="0.01"
+              />
+            )}
+          </>
+        ))}
+        {renderOption("Tarif impression résine", (
+          <>
+            {renderTarifSelect('tarifImpressionResine', parametres.prixImpressionResine)}
+            {devis.tarifImpressionResine === 'custom' && (
+              <input
+                type="number"
+                value={devis.tarifImpressionResineCustom || ''}
+                onChange={(e) => handleInputChange('tarifImpressionResineCustom', e.target.value)}
+                placeholder="Tarif personnalisé"
+                className={`${inputClass} mt-2`}
+                step="0.01"
+              />
+            )}
+          </>
+        ))}
+        {renderOption("Type de livraison", (
+          <CustomSelect
+            options={Object.entries(parametres.prixLivraison || {}).map(([type, prix]) => ({
+              value: type,
+              label: `${type} - ${prix}€`
+            }))}
+            value={devis.typeLivraison || ''}
+            onChange={(value) => {
+              handleInputChange('typeLivraison', value);
+              handleInputChange('prixLivraison', parametres.prixLivraison[value] || 0);
+            }}
+            className={inputClass}
+            darkMode={darkMode}
+          />
+        ))}
       </div>
-      <div>
-        <label className="block mb-2">Type de livraison</label>
-        <CustomSelect
-          options={Object.entries(parametres.prixLivraison || {}).map(([type, prix]) => ({
-            value: type,
-            label: `${type} - ${prix}€`
-          }))}
-          value={devis.typeLivraison || ''}
-          onChange={(value) => {
-            handleInputChange('typeLivraison', value);
-            handleInputChange('prixLivraison', parametres.prixLivraison[value] || 0);
-          }}
-          className={inputClass}
-          darkMode={darkMode}
-        />
+      <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">
+        <h3 className="text-xl font-semibold text-center mb-2">Total Impression et Livraison</h3>
+        <p className="text-3xl text-center font-bold text-teal-600 dark:text-teal-300">
+          {calculerTotal().toFixed(2)} €
+        </p>
       </div>
     </div>
   );

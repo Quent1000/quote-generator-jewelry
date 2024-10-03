@@ -7,9 +7,9 @@ const MAX_IMAGES = 10;
 const ImagesDevis = ({ 
   images, 
   mainImageId, 
-  onDrop,  // Assurez-vous que cette prop est bien passée
+  onDrop,
   removeImage, 
-  setAsMainImage, 
+  setMainImage, 
   getRootProps, 
   getInputProps, 
   isDragActive, 
@@ -78,7 +78,7 @@ const ImagesDevis = ({
               <XMarkIcon className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setAsMainImage(image.id)}
+              onClick={() => setMainImage(image.id)}
               className={`${buttonClass} bottom-2 right-2 bg-yellow-500 text-white ${
                 image.id === mainImageId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               }`}

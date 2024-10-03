@@ -1,9 +1,7 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
 
-const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal }) => {
-  console.log("Clients reçus dans InformationsEtDetails:", clients);
-
+const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal, onMetalChange }) => {
   const categories = {
     "Bague": ["Alliance", "Bague de fiançailles", "Chevalière", "Solitaire", "Autre"],
     "Bracelet": ["Jonc", "Chaîne", "Manchette", "Tennis", "Autre"],
@@ -26,9 +24,6 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     { value: 'nouveau', label: '+ Créer un nouveau client' }
   ];
 
-  console.log("Options clients finales:", clientOptions);
-
-  // Fonction pour trouver le label du client sélectionné
   const getSelectedClientLabel = () => {
     const selectedClient = clientOptions.find(option => option.value === devis.client);
     return selectedClient ? selectedClient.label : '';
@@ -43,114 +38,122 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     label: `${metal.nom} - ${(metal.prix / 1000).toFixed(2)}€/g`
   }));
 
+  const handleMetalChange = (value) => {
+    handleInputChange('metal', value);
+    onMetalChange(value); // Nouvelle fonction pour gérer le changement de métal
+  };
+
+  const renderOption = (label, content) => (
+    <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+      {content}
+    </div>
+  );
+
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4">Informations générales et détails du projet</h2>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="col-span-2 grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-2">Client</label>
-            <CustomSelect
-              options={clientOptions}
-              value={devis.client}
-              onChange={handleClientChange}
-              className={inputClass}
-              darkMode={darkMode}
-              displayValue={getSelectedClientLabel()}
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Titre du devis</label>
-            <input
-              type="text"
-              value={devis.titreDevis}
-              onChange={(e) => handleInputChange('titreDevis', e.target.value)}
-              className={inputClass}
-              placeholder="Entrez le titre du devis"
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Catégorie</label>
-            <CustomSelect
-              options={categorieOptions}
-              value={devis.categorie}
-              onChange={(value) => handleInputChange('categorie', value)}
-              className={inputClass}
-              darkMode={darkMode}
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Sous-catégorie</label>
-            <CustomSelect
-              options={sousCategorieOptions}
-              value={devis.sousCategorie}
-              onChange={(value) => handleInputChange('sousCategorie', value)}
-              className={inputClass}
-              darkMode={darkMode}
-              disabled={!devis.categorie}
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Métal</label>
-            <CustomSelect
-              options={metalOptions}
-              value={devis.metal}
-              onChange={(value) => handleInputChange('metal', value)}
-              className={inputClass}
-              darkMode={darkMode}
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Taille</label>
-            <input
-              type="text"
-              value={devis.taille}
-              onChange={(e) => handleInputChange('taille', e.target.value)}
-              className={inputClass}
-              placeholder="ex : 54, 18cm"
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Poids estimé (g)</label>
-            <input
-              type="number"
-              value={devis.poidsEstime}
-              onChange={(e) => handleInputChange('poidsEstime', parseFloat(e.target.value))}
-              className={inputClass}
-              step="0.01"
-              placeholder="ex : 3.5"
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Valeur métal estimée (€)</label>
-            <input
-              type="text"
-              value={valeurMetal}
-              readOnly
-              className={`${inputClass} bg-gray-100`}
-            />
-          </div>
-        </div>
-        <div className="col-span-2 space-y-4">
-          <div>
-            <label className="block mb-2">Description</label>
-            <textarea
-              value={devis.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className={`${inputClass} h-32`}
-              placeholder="Décrivez le projet en détail"
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Commentaire interne</label>
-            <textarea
-              value={devis.commentaireInterne}
-              onChange={(e) => handleInputChange('commentaireInterne', e.target.value)}
-              className={`${inputClass} h-32`}
-              placeholder="Ajoutez ici des notes internes sur le devis (non visibles par le client)"
-            />
-          </div>
-        </div>
+    <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Informations et Détails du Devis</h2>
+      
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        {renderOption("Titre du devis", (
+          <input
+            type="text"
+            value={devis.titreDevis}
+            onChange={(e) => handleInputChange('titreDevis', e.target.value)}
+            className={`${inputClass} text-sm`}
+            placeholder="Titre du devis"
+          />
+        ))}
+        {renderOption("Client", (
+          <CustomSelect
+            options={clientOptions}
+            value={devis.client}
+            onChange={(value) => {
+              if (value === 'nouveau') {
+                setShowNouveauClientPopup(true);
+              } else {
+                handleClientChange(value);
+              }
+            }}
+            className={inputClass}
+            darkMode={darkMode}
+            displayValue={getSelectedClientLabel()}
+          />
+        ))}
+        {renderOption("Catégorie", (
+          <CustomSelect
+            options={categorieOptions}
+            value={devis.categorie}
+            onChange={(value) => handleInputChange('categorie', value)}
+            className={inputClass}
+            darkMode={darkMode}
+          />
+        ))}
+        {renderOption("Sous-catégorie", (
+          <CustomSelect
+            options={sousCategorieOptions}
+            value={devis.sousCategorie}
+            onChange={(value) => handleInputChange('sousCategorie', value)}
+            className={inputClass}
+            darkMode={darkMode}
+            disabled={!devis.categorie}
+          />
+        ))}
+        {renderOption("Métal", (
+          <CustomSelect
+            options={metalOptions}
+            value={devis.metal}
+            onChange={handleMetalChange} // Utilisation de la nouvelle fonction
+            className={inputClass}
+            darkMode={darkMode}
+          />
+        ))}
+        {renderOption("Taille", (
+          <input
+            type="text"
+            value={devis.taille}
+            onChange={(e) => handleInputChange('taille', e.target.value)}
+            className={inputClass}
+            placeholder="ex : 54, 18cm"
+          />
+        ))}
+        {renderOption("Poids estimé (g)", (
+          <input
+            type="number"
+            value={devis.poidsEstime}
+            onChange={(e) => handleInputChange('poidsEstime', parseFloat(e.target.value))}
+            className={inputClass}
+            step="0.01"
+            placeholder="ex : 3.5"
+          />
+        ))}
+        {renderOption("Valeur métal (€)", (
+          <input
+            type="text"
+            value={valeurMetal}
+            readOnly
+            className={`${inputClass} bg-gray-100`}
+          />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {renderOption("Description", (
+          <textarea
+            value={devis.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className={`${inputClass} h-24`}
+            placeholder="Description du projet"
+          />
+        ))}
+        {renderOption("Commentaire interne", (
+          <textarea
+            value={devis.commentaireInterne}
+            onChange={(e) => handleInputChange('commentaireInterne', e.target.value)}
+            className={`${inputClass} h-24`}
+            placeholder="Notes internes (non visibles par le client)"
+          />
+        ))}
       </div>
     </div>
   );

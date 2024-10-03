@@ -174,8 +174,8 @@ const DiamantsPierres = ({
                     onChange={(value) => handleDiamantChange(index, 'taille', value)}
                     className={inputClass}
                     darkMode={darkMode}
-                    scrollable={true}
-                    width="100%"
+                    isScrollable={true}
+                    maxHeight={300}
                   />
                 </td>
                 <td className="p-2">
@@ -281,170 +281,175 @@ const DiamantsPierres = ({
         </div>
       </div>
       
-      <h3 className="text-lg font-semibold mb-4 mt-8 flex items-center">
-        Autres pierres
-        <Tooltip content="Ajoutez ici les détails des autres pierres pour votre devis">
-          <InformationCircleIcon className="h-5 w-5 ml-2 text-gray-400" />
-        </Tooltip>
-      </h3>
-      
-      <div className="overflow-x-auto relative">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="p-2 w-32">Forme</th> {/* Largeur fixe pour la colonne Forme */}
-              <th className="p-2">Dimension</th>
-              <th className="p-2">Type de pierres</th>
-              <th className="p-2">Prix de la pierre</th>
-              <th className="p-2">Caratage</th>
-              <th className="p-2">Sertissage</th>
-              <th className="p-2">Coût sertissage unitaire</th>
-              <th className="p-2 w-24">Fourni par</th>
-              <th className="p-2">Quantité</th>
-              <th className="p-2 w-16"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {devis.autresPierres.map((pierre, index) => (
-              <tr key={index} className="border-b dark:border-gray-700">
-                <td className="p-2">
-                  <CustomSelect
-                    options={formesOptions}
-                    value={pierre.forme}
-                    onChange={(value) => handleAutrePierreChange(index, 'forme', value)}
-                    className={inputClass}
-                    darkMode={darkMode}
-                    scrollable={true}
-                    fixedWidth="128px" // Largeur fixe pour le CustomSelect
-                  />
-                </td>
-                <td className="p-2">
-                  <input
-                    type="text"
-                    value={pierre.dimension}
-                    onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)}
-                    className={inputClass}
-                    placeholder="ex: 4.34 x 2.61 x 2.2"
-                  />
-                </td>
-                <td className="p-2">
-                  <CustomSelect
-                    options={typePierresOptions}
-                    value={pierre.type}
-                    onChange={(value) => handleAutrePierreChange(index, 'type', value)}
-                    className={inputClass}
-                    darkMode={darkMode}
-                    scrollable={true}
-                    fixedWidth="200px"
-                  />
-                </td>
-                <td className="p-2">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={pierre.prix}
-                      onChange={(e) => handleAutrePierreChange(index, 'prix', parseFloat(e.target.value))}
-                      className={`${inputClass} pr-6`}
-                      step="0.01"
-                    />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
-                  </div>
-                </td>
-                <td className="p-2">
-                  <div className="relative">
-                    <input
-                      type="text" // Changé de "number" à "text"
-                      value={pierre.carat}
-                      onChange={(e) => handleAutrePierreChange(index, 'carat', e.target.value)}
-                      className={`${inputClass} pr-8`}
-                      step="0.01"
-                    />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">ct</span>
-                  </div>
-                </td>
-                <td className="p-2">
-                  <CustomSelect
-                    options={sertissageOptions}
-                    value={pierre.sertissage}
-                    onChange={(value) => handleAutrePierreChange(index, 'sertissage', value)}
-                    className={inputClass}
-                    darkMode={darkMode}
-                    fixedWidth="200px"
-                  />
-                </td>
-                <td className="p-2">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={pierre.coutSertissageUnitaire || 0}
-                      onChange={(e) => handleAutrePierreChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
-                      className={`${inputClass} pr-6`}
-                      step="0.01"
-                    />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
-                  </div>
-                </td>
-                <td className="p-2">
-                  <CustomSelect
-                    options={fournisseurOptions}
-                    value={pierre.fourniPar}
-                    onChange={(value) => handleAutrePierreChange(index, 'fourniPar', value)}
-                    className={inputClass}
-                    darkMode={darkMode}
-                    fixedWidth="100%" // Utiliser 100% de la largeur de la cellule
-                  />
-                </td>
-                <td className="p-2">
-                  <input
-                    type="number"
-                    value={pierre.qte}
-                    onChange={(e) => handleAutrePierreChange(index, 'qte', parseInt(e.target.value))}
-                    className={inputClass}
-                    min="0"
-                  />
-                </td>
-                <td className="p-2 text-center">
-                  <button
-                    onClick={() => handleRemoveAutrePierre(index)}
-                    className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                  >
-                    <TrashIcon className="h-6 w-6" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="mt-4 flex justify-between items-center">
-        <button
-          type="button"
-          onClick={handleAddAutrePierre}
-          className="flex items-center bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors"
-        >
-          <PlusCircleIcon className="h-5 w-5 mr-2" />
-          Ajouter une autre pierre
-        </button>
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4 flex items-center">
+          Autres pierres
+          <Tooltip content="Ajoutez ici les détails des autres pierres pour votre devis">
+            <InformationCircleIcon className="h-5 w-5 ml-2 text-gray-400" />
+          </Tooltip>
+        </h3>
         
-        <div className="flex space-x-4">
-          <div>
-            <label className="block mb-2 font-semibold">Total prix autres pierres</label>
-            <input
-              type="text"
-              value={`${calculerPrixAutresPierres().toFixed(2)} €`}
-              readOnly
-              className={`${autoFilledInputClass} w-full`}
-            />
-          </div>
-          <div>
-            <label className="block mb-2 font-semibold">Total prix sertissage autres pierres</label>
-            <input
-              type="text"
-              value={`${calculerPrixSertissageAutresPierres().toFixed(2)} €`}
-              readOnly
-              className={`${autoFilledInputClass} w-full`}
-            />
+        <div className="overflow-x-auto relative">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-100 dark:bg-gray-700">
+                <th className="p-2 w-28">Forme</th>
+                <th className="p-2 w-32">Dimension</th>
+                <th className="p-2 w-36">Type de pierres</th>
+                <th className="p-2 w-24">Prix</th>
+                <th className="p-2 w-24">Carat</th>
+                <th className="p-2 w-32">Sertissage</th>
+                <th className="p-2 w-28">Coût sertissage</th>
+                <th className="p-2 w-28">Fourni par</th>
+                <th className="p-2 w-24">Quantité</th>
+                <th className="p-2 w-16">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {devis.autresPierres.map((pierre, index) => (
+                <tr key={index} className="border-b dark:border-gray-700">
+                  <td className="p-2">
+                    <CustomSelect
+                      options={formesOptions}
+                      value={pierre.forme}
+                      onChange={(value) => handleAutrePierreChange(index, 'forme', value)}
+                      className={inputClass}
+                      darkMode={darkMode}
+                      isScrollable={true}
+                      maxHeight={200}
+                      fixedWidth="100%"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="text"
+                      value={pierre.dimension}
+                      onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)}
+                      className={inputClass}
+                      placeholder="ex: 4.34 x 2.61"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <CustomSelect
+                      options={typePierresOptions}
+                      value={pierre.type}
+                      onChange={(value) => handleAutrePierreChange(index, 'type', value)}
+                      className={inputClass}
+                      darkMode={darkMode}
+                      isScrollable={true}
+                      maxHeight={200}
+                      fixedWidth="100%"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={pierre.prix || 0}
+                        onChange={(e) => handleAutrePierreChange(index, 'prix', parseFloat(e.target.value))}
+                        className={`${inputClass} pr-6`}
+                        step="0.01"
+                      />
+                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={pierre.carat}
+                        onChange={(e) => handleAutrePierreChange(index, 'carat', e.target.value)}
+                        className={`${inputClass} pr-8`}
+                      />
+                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">ct</span>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <CustomSelect
+                      options={sertissageOptions}
+                      value={pierre.sertissage}
+                      onChange={(value) => handleAutrePierreChange(index, 'sertissage', value)}
+                      className={inputClass}
+                      darkMode={darkMode}
+                      isScrollable={true}
+                      maxHeight={200}
+                      fixedWidth="100%"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={pierre.coutSertissageUnitaire || 0}
+                        onChange={(e) => handleAutrePierreChange(index, 'coutSertissageUnitaire', parseFloat(e.target.value))}
+                        className={`${inputClass} pr-6`}
+                        step="0.01"
+                      />
+                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <CustomSelect
+                      options={fournisseurOptions}
+                      value={pierre.fourniPar}
+                      onChange={(value) => handleAutrePierreChange(index, 'fourniPar', value)}
+                      className={inputClass}
+                      darkMode={darkMode}
+                      fixedWidth="100%"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="number"
+                      value={pierre.qte}
+                      onChange={(e) => handleAutrePierreChange(index, 'qte', parseInt(e.target.value))}
+                      className={inputClass}
+                      min="0"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    <button
+                      onClick={() => handleRemoveAutrePierre(index)}
+                      className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="mt-4 flex justify-between items-center">
+          <button
+            type="button"
+            onClick={handleAddAutrePierre}
+            className="flex items-center bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors"
+          >
+            <PlusCircleIcon className="h-5 w-5 mr-2" />
+            Ajouter une autre pierre
+          </button>
+          
+          <div className="flex space-x-4">
+            <div>
+              <label className="block mb-2 font-semibold">Total prix autres pierres</label>
+              <input
+                type="text"
+                value={`${calculerPrixAutresPierres().toFixed(2)} €`}
+                readOnly
+                className={`${autoFilledInputClass} w-full`}
+              />
+            </div>
+            <div>
+              <label className="block mb-2 font-semibold">Total prix sertissage autres pierres</label>
+              <input
+                type="text"
+                value={`${calculerPrixSertissageAutresPierres().toFixed(2)} €`}
+                readOnly
+                className={`${autoFilledInputClass} w-full`}
+              />
+            </div>
           </div>
         </div>
       </div>
