@@ -15,6 +15,7 @@ import OptionsProduit from '../components/devis/OptionsProduit';
 import TempsProduction from '../components/devis/TempsProduction';
 import TarifsImpression from '../components/devis/TarifsImpression';
 import ImagesDevis from '../components/devis/ImagesDevis';
+import ResumeDevis from '../components/devis/ResumeDevis'; // Créez ce composant
 
 const PageCreerDevisV2 = () => {
   const { darkMode } = useAppContext();
@@ -44,7 +45,7 @@ const PageCreerDevisV2 = () => {
     },
     diamants: [{
       taille: '',
-      qte: 1,
+      qte: 0, // Changé de 1 à 0
       fourniPar: 'TGN 409',
       sertissage: '',
       carat: 0,
@@ -56,7 +57,7 @@ const PageCreerDevisV2 = () => {
       forme: '',
       type: '',
       taille: '',
-      qte: 1,
+      qte: 0, // Changé de 1 à 0
       fourniPar: 'TGN 409',
       sertissage: '',
       prix: 0,
@@ -282,13 +283,12 @@ const PageCreerDevisV2 = () => {
     });
   };
 
-  const handleAddDiamant = useCallback((e) => {
-    if (e) e.preventDefault();
+  const handleAddDiamant = useCallback(() => {
     setDevis(prev => ({
       ...prev,
       diamants: [...prev.diamants, {
         taille: '',
-        qte: 1,
+        qte: 0, // Changé de 1 à 0
         fourniPar: 'TGN 409',
         sertissage: '',
         carat: 0,
@@ -455,6 +455,7 @@ const PageCreerDevisV2 = () => {
     { id: 'tarifs', label: "Tarifs d'impression" },
     { id: 'composants', label: 'Composants et autres' }, // Nouvel onglet
     { id: 'images', label: 'Images' },
+    { id: 'resume', label: 'Résumé du devis' }, // Nouvel onglet
   ];
 
   const handleClientChange = (clientId) => {
@@ -579,6 +580,10 @@ const PageCreerDevisV2 = () => {
             isDragActive={isDragActive}
             handlePaste={handlePaste}
           />
+        );
+      case 'resume':
+        return (
+          <ResumeDevis devis={devis} darkMode={darkMode} />
         );
       default:
         return null;

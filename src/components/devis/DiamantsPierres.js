@@ -53,6 +53,8 @@ const DiamantsPierres = ({
     
     if (field === 'taille') {
       updatedDiamant.carat = diametresEtCarats[value] || 0;
+      // Si un diamètre est sélectionné, mettre la quantité à 1, sinon à 0
+      updatedDiamant.qte = value ? 1 : 0;
       const prixCategorie = Object.entries(parametres.prixDiamantsRonds).find(([categorie]) => {
         const [min, max] = categorie.split(' - ').map(parseFloat);
         return parseFloat(value) >= min && parseFloat(value) <= max;
@@ -60,6 +62,7 @@ const DiamantsPierres = ({
       updatedDiamant.prixCarat = prixCategorie ? prixCategorie[1] : 0;
     }
 
+    // Mise à jour des calculs
     updatedDiamant.prixUnitaire = updatedDiamant.carat * updatedDiamant.prixCarat;
 
     if (updatedDiamant.fourniPar === 'Client') {
@@ -83,13 +86,11 @@ const DiamantsPierres = ({
   };
 
   const handleAutrePierreChange = (index, field, value) => {
-    let updatedValue = value;
-
-    const updatedPierre = { ...devis.autresPierres[index], [field]: updatedValue };
+    let updatedPierre = { ...devis.autresPierres[index], [field]: value };
     
-    // Mise à jour du coût de sertissage unitaire si le type de sertissage change
-    if (field === 'sertissage') {
-      updatedPierre.coutSertissageUnitaire = parametres.prixSertissage[value] || 0;
+    if (field === 'forme') {
+      // Si une forme est sélectionnée, mettre la quantité à 1, sinon à 0
+      updatedPierre.qte = value ? 1 : 0;
     }
 
     // Gestion spéciale pour le champ caratage
@@ -179,13 +180,22 @@ const DiamantsPierres = ({
                   />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    value={diamant.qte}
-                    onChange={(e) => handleDiamantChange(index, 'qte', parseInt(e.target.value))}
-                    className={inputClass}
-                    min="0"
-                  />
+                  {diamant.taille ? (
+                    <input
+                      type="number"
+                      value={diamant.qte}
+                      onChange={(e) => handleDiamantChange(index, 'qte', parseInt(e.target.value))}
+                      className={inputClass}
+                      min="0"
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      value={0}
+                      readOnly
+                      className={`${inputClass} bg-gray-100 dark:bg-gray-700`}
+                    />
+                  )}
                 </td>
                 <td className="p-2">
                   <CustomSelect
@@ -293,16 +303,16 @@ const DiamantsPierres = ({
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 dark:bg-gray-700">
-                <th className="p-2 w-28">Forme</th>
-                <th className="p-2 w-32">Dimension</th>
-                <th className="p-2 w-36">Type de pierres</th>
-                <th className="p-2 w-24">Prix</th>
-                <th className="p-2 w-24">Carat</th>
-                <th className="p-2 w-32">Sertissage</th>
-                <th className="p-2 w-28">Coût sertissage</th>
-                <th className="p-2 w-28">Fourni par</th>
-                <th className="p-2 w-24">Quantité</th>
-                <th className="p-2 w-16">Actions</th>
+                <th className="p-2">Forme</th>
+                <th className="p-2">Type</th>
+                <th className="p-2">Taille</th>
+                <th className="p-2">Prix unitaire</th>
+                <th className="p-2">Caratage</th>
+                <th className="p-2">Sertissage</th>
+                <th className="p-2">Coût sertissage unitaire</th>
+                <th className="p-2">Fourni par</th>
+                <th className="p-2">Quantité</th>
+                <th className="p-2 w-16"></th> {/* Supprimé le titre et réduit la largeur */}
               </tr>
             </thead>
             <tbody>
@@ -320,15 +330,6 @@ const DiamantsPierres = ({
                     />
                   </td>
                   <td className="p-2">
-                    <input
-                      type="text"
-                      value={pierre.dimension}
-                      onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)}
-                      className={inputClass}
-                      placeholder="ex: 4.34 x 2.61"
-                    />
-                  </td>
-                  <td className="p-2">
                     <CustomSelect
                       options={typePierresOptions}
                       value={pierre.type}
@@ -338,6 +339,15 @@ const DiamantsPierres = ({
                       isScrollable={true}
                       maxHeight={200}
                       fixedWidth="100%"
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="text"
+                      value={pierre.dimension}
+                      onChange={(e) => handleAutrePierreChange(index, 'dimension', e.target.value)}
+                      className={inputClass}
+                      placeholder="ex: 4.34 x 2.61"
                     />
                   </td>
                   <td className="p-2">
@@ -411,7 +421,7 @@ const DiamantsPierres = ({
                       onClick={() => handleRemoveAutrePierre(index)}
                       className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <TrashIcon className="h-6 w-6" /> {/* Augmenté la taille de l'icône */}
                     </button>
                   </td>
                 </tr>
