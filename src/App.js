@@ -5,7 +5,7 @@ import { AppProvider } from './context/AppContext';
 import Sidebar from './components/layout/Sidebar';
 import PageTableauDeBord from './pages/PageTableauDeBord';
 import PageClients from './pages/PageClients';
-import PageCreerDevis from './pages/PageCreerDevis';
+import PageCreerDevisV2 from './pages/PageCreerDevisV2';
 import PageParametrageDevis from './pages/PageParametrageDevis';
 import LoginPage from './pages/LoginPage';
 import PageProfil from './pages/PageProfil';
@@ -13,7 +13,6 @@ import PageAccesRefuse from './pages/PageAccesRefuse';
 import PageGestionUtilisateurs from './pages/PageGestionUtilisateurs';
 import withRoleAccess from './components/auth/withRoleAccess';
 import PageAccueil from './pages/PageAccueil';
-import PageCreerDevisV2 from './pages/PageCreerDevisV2';
 
 const App = () => {
   return (
@@ -45,7 +44,7 @@ const AppContent = () => {
           <Route path="/" element={<PageAccueil />} />
           <Route path="/tableau-de-bord" element={<PageTableauDeBord />} />
           <Route path="/clients" element={<PageClients />} />
-          <Route path="/creer-devis" element={<PageCreerDevis />} />
+          <Route path="/creer-devis" element={<PageCreerDevisV2 />} />
           <Route path="/parametrage-devis" element={<ProtectedPageParametrageDevis />} />
           <Route path="/profil" element={<PageProfil />} />
           <Route path="/acces-refuse" element={<PageAccesRefuse />} />

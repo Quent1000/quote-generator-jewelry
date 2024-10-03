@@ -5,8 +5,8 @@ import CustomSelect from './CustomSelect';
 
 const ComposantsEtAutres = ({ devis, handleInputChange, darkMode }) => {
   const [composantsFrequents, setComposantsFrequents] = useState([]);
-  const [composantsLibres, setComposantsLibres] = useState([]);
-  const [composantsFrequentsSelectionnes, setComposantsFrequentsSelectionnes] = useState([]);
+  const [composantsLibres, setComposantsLibres] = useState(devis.composantsLibres || []);
+  const [composantsFrequentsSelectionnes, setComposantsFrequentsSelectionnes] = useState(devis.composantsFrequents || []);
 
   useEffect(() => {
     const chargerComposantsFrequents = async () => {
@@ -36,7 +36,7 @@ const ComposantsEtAutres = ({ devis, handleInputChange, darkMode }) => {
   useEffect(() => {
     handleInputChange('composantsFrequents', composantsFrequentsSelectionnes);
     handleInputChange('composantsLibres', composantsLibres);
-  }, [composantsFrequentsSelectionnes, composantsLibres]);
+  }, [composantsFrequentsSelectionnes, composantsLibres, handleInputChange]);
 
   const inputClass = `w-full p-2 border rounded ${
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'

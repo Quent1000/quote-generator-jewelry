@@ -16,7 +16,7 @@ const Sidebar = () => {
     { title: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, link: '/tableau-de-bord' },
     { title: 'Clients', icon: <UserGroupIcon className="w-6 h-6" />, link: '/clients' },
     { title: 'Créer un devis', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis' },
-    { title: 'Créer un devis (V2)', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis-v2' },
+   // { title: 'Créer un devis (V2)', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis-v2' },
     { title: 'Paramétrage devis', icon: <CogIcon className="w-6 h-6" />, link: '/parametrage-devis', role: 'admin' },
     { title: 'Profil', icon: <UserIcon className="w-6 h-6" />, link: '/profil' },
     { title: 'Gestion utilisateurs', icon: <UsersIcon className="w-6 h-6" />, link: '/gestion-utilisateurs', role: 'admin' },
