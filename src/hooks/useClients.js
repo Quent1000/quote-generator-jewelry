@@ -69,6 +69,15 @@ const useClients = () => {
       return; // Ne pas ajouter le client si un client avec le même email existe déjà
     }
 
+    if (newClient.entreprise) {
+      const entrepriseRef = await addDoc(collection(db, 'entreprises'), {
+        nom: newClient.entreprise.nom,
+        raisonSociale: newClient.entreprise.raisonSociale,
+        // ... (autres champs de l'entreprise)
+      });
+      newClient.entrepriseId = entrepriseRef.id;
+    }
+
     await addDoc(clientsCollection, newClient);
   };
 
@@ -89,7 +98,15 @@ const useClients = () => {
       // Mise à jour de l'entreprise si nécessaire
       if (updatedClient.entreprise && updatedClient.entreprise.id) {
         const entrepriseRef = doc(db, 'entreprises', updatedClient.entreprise.id);
-        await updateDoc(entrepriseRef, updatedClient.entreprise);
+        const entrepriseUpdate = {
+          nom: updatedClient.entreprise.nom || '',
+          // Vérifier si raisonSociale existe et n'est pas undefined
+          ...(updatedClient.entreprise.raisonSociale !== undefined && {
+            raisonSociale: updatedClient.entreprise.raisonSociale
+          }),
+          // Ajouter d'autres champs de l'entreprise ici, en vérifiant qu'ils ne sont pas undefined
+        };
+        await updateDoc(entrepriseRef, entrepriseUpdate);
       }
 
       const updatedClients = allClients.map(client =>

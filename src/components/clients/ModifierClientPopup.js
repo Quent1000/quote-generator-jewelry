@@ -18,6 +18,7 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
 
   const [entreprise, setEntreprise] = useState({
     nom: '',
+    raisonSociale: '', // Ajoutez cette ligne
     adresse: '',
     siteWeb: '',
     logo: '',
@@ -275,7 +276,12 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
       const updatedClient = {
         ...clientData,
         entrepriseId: selectedEntrepriseId,
-        relationClient: { ...clientData.relationClient, tags, rating }
+        relationClient: { ...clientData.relationClient, tags, rating },
+        entreprise: {
+          ...entreprise,
+          raisonSociale: entreprise.raisonSociale || '', // Utiliser une chaîne vide si undefined
+          // Gérer de la même manière les autres champs qui pourraient être undefined
+        }
       };
 
       await updateDoc(doc(db, 'clients', clientData.id), updatedClient);
@@ -430,13 +436,21 @@ const ModifierClientPopup = ({ isOpen, onClose, client, darkMode, onClientUpdate
               </select>
               {selectedEntrepriseId && (
                 <>
-                  <input
-                    type="text"
+                  <FormInput
+                    label="Nom de l'entreprise"
                     name="nom"
                     value={entreprise.nom}
                     onChange={handleEntrepriseFieldChange}
-                    className={inputClass}
-                    placeholder="Nom de l'entreprise"
+                    error={errors['entreprise.nom']}
+                    darkMode={darkMode}
+                  />
+                  <FormInput
+                    label="Raison sociale"
+                    name="raisonSociale"
+                    value={entreprise.raisonSociale}
+                    onChange={handleEntrepriseFieldChange}
+                    error={errors['entreprise.raisonSociale']}
+                    darkMode={darkMode}
                   />
                   <input
                     type="text"

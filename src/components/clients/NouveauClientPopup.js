@@ -17,6 +17,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
     },
     entreprise: {
       nom: '',
+      raisonSociale: '',
       adresse: '',
       siteWeb: '',
       siren: '',  // Ajout du champ SIREN
@@ -424,6 +425,14 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
                     error={errors['entreprise.nom']}
                     darkMode={darkMode}
                     required
+                  />
+                  <FormInput
+                    label="Raison sociale"
+                    name="raisonSociale"
+                    value={formData.entreprise.raisonSociale}
+                    onChange={(e) => handleChange(e, 'entreprise')}
+                    error={errors['entreprise.raisonSociale']}
+                    darkMode={darkMode}
                   />
                   <FormInput
                     label="Adresse"
