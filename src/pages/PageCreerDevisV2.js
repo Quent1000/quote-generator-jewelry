@@ -234,15 +234,18 @@ const PageCreerDevisV2 = () => {
     });
   };
 
-  const handleOptionsChange = (option, value) => {
-    setDevis(prevDevis => ({
-      ...prevDevis,
-      options: {
-        ...prevDevis.options,
-        [option]: value
+  const handleOptionsChange = useCallback((option, value) => {
+    setDevis(prevDevis => {
+      const newDevis = { ...prevDevis };
+      if (option === 'rhodiage') {
+        newDevis.options = { ...newDevis.options, rhodiage: value };
+      } else {
+        // Gestion des autres options
+        newDevis.options = { ...newDevis.options, [option]: value };
       }
-    }));
-  };
+      return newDevis;
+    });
+  }, []);
 
   const handleDiamantChange = (index, field, value) => {
     setDevis(prevDevis => {
@@ -468,7 +471,19 @@ const PageCreerDevisV2 = () => {
   }, [activeTab]);
 
   const handleMetalChange = useCallback((metalValue) => {
-    setIsOrGrisSelected(metalValue.toLowerCase().includes('or gris'));
+    setDevis(prevDevis => {
+      const newDevis = { ...prevDevis, metal: metalValue };
+      const isOrGris = metalValue.toLowerCase().includes('or gris');
+      setIsOrGrisSelected(isOrGris); // Utilisation de setIsOrGrisSelected
+      if (isOrGris) {
+        // Suggérer le rhodiage pour l'or gris, mais ne pas le forcer
+        newDevis.options = { ...newDevis.options, rhodiage: true };
+      } else {
+        // Désélectionner le rhodiage pour les autres métaux
+        newDevis.options = { ...newDevis.options, rhodiage: false };
+      }
+      return newDevis;
+    });
   }, []);
 
   const renderTabContent = () => {
@@ -485,6 +500,7 @@ const PageCreerDevisV2 = () => {
             metaux={metaux}
             valeurMetal={valeurMetal}
             onMetalChange={handleMetalChange}
+            isOrGrisSelected={isOrGrisSelected} // Passer isOrGrisSelected comme prop
           />
         );
       case 'tarifs':

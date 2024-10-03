@@ -1,7 +1,7 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
 
-const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal, onMetalChange }) => {
+const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal, onMetalChange, isOrGrisSelected }) => {
   const categories = {
     "Bague": ["Alliance", "Bague de fiançailles", "Chevalière", "Solitaire", "Autre"],
     "Bracelet": ["Jonc", "Chaîne", "Manchette", "Tennis", "Autre"],
@@ -33,14 +33,30 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
   const sousCategorieOptions = devis.categorie && categories[devis.categorie]
     ? categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
     : [];
-  const metalOptions = metaux.map(metal => ({
-    value: metal.nom,
-    label: `${metal.nom} - ${(metal.prix / 1000).toFixed(2)}€/g`
-  }));
+
+  const ordrePersonnalise = ['Or Jaune 3N', 'Or Gris', 'Or Rouge 5N', 'Or Gris Palladié'];
+
+  const metalOptions = ordrePersonnalise
+    .map(nomMetal => {
+      const metal = metaux.find(m => m.nom === nomMetal);
+      return metal ? {
+        value: metal.nom,
+        label: `${metal.nom} - ${(metal.prix / 1000).toFixed(2)}€/g`
+      } : null;
+    })
+    .filter(Boolean)
+    .concat(
+      metaux
+        .filter(metal => !ordrePersonnalise.includes(metal.nom))
+        .map(metal => ({
+          value: metal.nom,
+          label: `${metal.nom} - ${(metal.prix / 1000).toFixed(2)}€/g`
+        }))
+    );
 
   const handleMetalChange = (value) => {
     handleInputChange('metal', value);
-    onMetalChange(value); // Nouvelle fonction pour gérer le changement de métal
+    onMetalChange(value);
   };
 
   const renderOption = (label, content) => (
@@ -100,13 +116,20 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
           />
         ))}
         {renderOption("Métal", (
-          <CustomSelect
-            options={metalOptions}
-            value={devis.metal}
-            onChange={handleMetalChange} // Utilisation de la nouvelle fonction
-            className={inputClass}
-            darkMode={darkMode}
-          />
+          <>
+            <CustomSelect
+              options={metalOptions}
+              value={devis.metal}
+              onChange={handleMetalChange}
+              className={inputClass}
+              darkMode={darkMode}
+            />
+            {isOrGrisSelected && (
+              <p className="mt-2 text-sm text-teal-600 dark:text-teal-400">
+                L'option de rhodiage est recommandée pour l'or gris.
+              </p>
+            )}
+          </>
         ))}
         {renderOption("Taille", (
           <input
