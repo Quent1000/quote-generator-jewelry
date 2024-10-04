@@ -1,5 +1,7 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import Tooltip from '../Tooltip'; // Assurez-vous d'avoir un composant Tooltip
 
 const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) => {
   const inputClass = `w-full p-2 border rounded ${
@@ -18,9 +20,16 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
     return tempsTotal * tauxHoraire;
   };
 
-  const renderOption = (label, content) => (
+  const renderOption = (label, content, tooltipContent = null) => (
     <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <label className="block mb-2 font-semibold text-gray-700 dark:text-gray-300">{label}</label>
+      <div className="flex items-center mb-2">
+        <label className="font-semibold text-gray-700 dark:text-gray-300">{label}</label>
+        {tooltipContent && (
+          <Tooltip content={tooltipContent}>
+            <InformationCircleIcon className="w-5 h-5 ml-2 text-gray-400 cursor-help" />
+          </Tooltip>
+        )}
+      </div>
       {content}
     </div>
   );
@@ -49,7 +58,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
   );
 
   const calculerTotalTemps = () => {
-    const types = ['administratif', 'cao', 'bijouterie', 'polissage', 'dessertissage', 'design'];
+    const types = ['administratif', 'cao', 'bijouterie', 'joaillerie', 'dessertissage', 'design'];
     return types.reduce((total, type) => {
       return total + calculerPrix(devis.tempsProduction[type], tauxHoraires[type]);
     }, 0);
@@ -82,15 +91,15 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
               Prix : {calculerPrix(devis.tempsProduction.bijouterie, tauxHoraires.bijouterie).toFixed(2)} €
             </p>
           </>
-        ))}
-        {renderOption("Polissage", (
+        ), "Utilisé pour le calcul du prix des pièces fabriquées en série ou des pièces standard, nécessitant des processus de production plus rapides et automatisés.")}
+        {renderOption("Joaillerie", (
           <>
-            {renderTempsSelect('polissage', 'Polissage')}
+            {renderTempsSelect('joaillerie', 'Joaillerie')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.polissage, tauxHoraires.polissage).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.joaillerie, tauxHoraires.joaillerie).toFixed(2)} €
             </p>
           </>
-        ))}
+        ), "Utilisé pour le calcul du prix des pièces sur mesure ou uniques, demandant des techniques artisanales plus poussées et un temps de travail plus long.")}
         {renderOption("Désertissage", (
           <>
             {renderTempsSelect('dessertissage', 'Désertissage')}

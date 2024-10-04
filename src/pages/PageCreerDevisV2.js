@@ -68,7 +68,7 @@ const PageCreerDevisV2 = () => {
       administratif: { heures: 0, minutes: 0 },
       cao: { heures: 0, minutes: 0 },
       bijouterie: { heures: 0, minutes: 0 },
-      polissage: { heures: 0, minutes: 0 },
+      joaillerie: { heures: 0, minutes: 0 }, // Changé de polissage à joaillerie
       dessertissage: { heures: 0, minutes: 0 },
       design: { heures: 0, minutes: 0 },
     },
@@ -76,7 +76,10 @@ const PageCreerDevisV2 = () => {
     tarifImpressionCire: '',
     tarifImpressionResine: '',
     typeLivraison: '',
-    prixLivraison: 0
+    prixLivraison: 0,
+    remise: { type: 'pourcentage', valeur: 0 },
+    composantsFrequents: [],
+    composantsLibres: [],
   });
 
 
@@ -129,7 +132,7 @@ const PageCreerDevisV2 = () => {
     administratif: 0,
     cao: 0,
     bijouterie: 0,
-    polissage: 0,
+    joaillerie: 0, // Changé de polissage à joaillerie
     dessertissage: 0,
     design: 0,
   });
@@ -213,7 +216,7 @@ const PageCreerDevisV2 = () => {
           administratif: data.tauxHoraireAdministratif || 0,
           cao: data.tauxHoraireCAO || 0,
           bijouterie: data.tauxHoraireBijouterie || 0,
-          polissage: data.tauxHoraireBijouterie || 0, // Utilise le même taux que bijouterie
+          joaillerie: data.tauxHoraireJoaillerie || 0, // Utilisez le taux spécifique à la joaillerie
           dessertissage: data.tauxHoraireDesertissage || 0,
           design: data.tauxHoraireDesign || 0,
         });
@@ -449,13 +452,13 @@ const PageCreerDevisV2 = () => {
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
-    { id: 'options', label: 'Options du produit' },
+    { id: 'options', label: 'Gravure et Finition' },
     { id: 'temps', label: 'Temps de production' },
     { id: 'diamants', label: 'Diamants et pierres' },
-    { id: 'tarifs', label: "Tarifs d'impression" },
-    { id: 'composants', label: 'Composants et autres' }, // Nouvel onglet
+    { id: 'tarifs', label: "Impression 3D et Fonte" }, // Modifié ici
+    { id: 'composants', label: 'Composants et autres' },
     { id: 'images', label: 'Images' },
-    { id: 'resume', label: 'Résumé du devis' }, // Nouvel onglet
+    { id: 'resume', label: 'Résumé du devis' },
   ];
 
   const handleClientChange = (clientId) => {
@@ -490,6 +493,32 @@ const PageCreerDevisV2 = () => {
       return newDevis;
     });
   }, []);
+
+  const handleRemiseChange = (type, valeur) => {
+    setDevis(prevDevis => ({
+      ...prevDevis,
+      remise: { type, valeur: parseFloat(valeur) }
+    }));
+  };
+
+  // Ajoutez cette fonction dans le composant PageCreerDevisV2
+  const handleComposantChange = (index, field, value, type) => {
+    setDevis(prevDevis => {
+      const newComposants = [...prevDevis[type]];
+      if (field === 'composant') {
+        newComposants[index] = value;
+      } else {
+        newComposants[index] = { ...newComposants[index], [field]: value };
+      }
+      
+      // Recalculer le prix total du composant si nécessaire
+      if (field === 'prix' || field === 'quantite') {
+        newComposants[index].prixTotal = (parseFloat(newComposants[index].prix) || 0) * (parseInt(newComposants[index].quantite) || 1);
+      }
+      
+      return { ...prevDevis, [type]: newComposants };
+    });
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -563,6 +592,7 @@ const PageCreerDevisV2 = () => {
           <ComposantsEtAutres
             devis={devis}
             handleInputChange={handleInputChange}
+            handleComposantChange={handleComposantChange} // Ajoutez cette ligne
             darkMode={darkMode}
           />
         );
@@ -582,8 +612,24 @@ const PageCreerDevisV2 = () => {
           />
         );
       case 'resume':
-        return (
-          <ResumeDevis devis={devis} darkMode={darkMode} />
+        return clients.length > 0 ? (
+          <ResumeDevis 
+            devis={
+              {
+                ...devis,
+                composantsFrequents: devis.composantsFrequents || [],
+                composantsLibres: devis.composantsLibres || []
+              }
+            }
+            darkMode={darkMode} 
+            clients={clients} 
+            parametres={parametres}
+            handleInputChange={handleInputChange}
+            tauxHoraires={tauxHoraires}
+            handleRemiseChange={handleRemiseChange}
+          />
+        ) : (
+          <div>Chargement des données client...</div>
         );
       default:
         return null;

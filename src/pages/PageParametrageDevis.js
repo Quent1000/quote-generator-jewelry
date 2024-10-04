@@ -26,6 +26,7 @@ const PageParametrageDevis = () => {
     tauxHoraireAdministratif: 0,
     tauxHoraireDesign: 0,
     tauxHoraireDesertissage: 0,
+    tauxHoraireJoaillerie: 0,
     margeGlobale: 0,
     margeDiamantsRondsFournis: 0,
     margeAutresPierresFournis: 0,
@@ -110,6 +111,7 @@ const PageParametrageDevis = () => {
         ...data,
         tauxHoraireDesign: data.tauxHoraireDesign || 0,
         tauxHoraireDesertissage: data.tauxHoraireDesertissage || 0,
+        tauxHoraireJoaillerie: data.tauxHoraireJoaillerie || 0, // Ajoutez cette ligne
         prixDiamantsRonds: data.prixDiamantsRonds || {
           "0.50 - 1.20 mm": 600,
           "1.25 - 1.75 mm": 580,
@@ -412,6 +414,17 @@ const PageParametrageDevis = () => {
                     name="tauxHoraireDesertissage"
                     value={parametres.tauxHoraireDesertissage}
                     onChange={(e) => handleInputChange('tauxHoraireDesertissage', e.target.value)}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2">Taux horaire Joaillerie</label>
+                  <input
+                    type="number"
+                    name="tauxHoraireJoaillerie"
+                    value={parametres.tauxHoraireJoaillerie}
+                    onChange={(e) => handleInputChange('tauxHoraireJoaillerie', e.target.value)}
                     className={inputClass}
                     step="0.01"
                   />

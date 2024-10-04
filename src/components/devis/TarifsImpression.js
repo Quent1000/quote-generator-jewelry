@@ -48,15 +48,12 @@ const TarifsImpression = ({ devis, handleInputChange, darkMode, parametres }) =>
     // Tarif impression résine
     total += devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
     
-    // Prix livraison
-    total += parseFloat(devis.prixLivraison || 0);
-    
     return total;
   };
 
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Tarifs d'impression et livraison</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Impression 3D et Fonte</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {renderOption("Tarif fonte", (
           <>
@@ -88,7 +85,7 @@ const TarifsImpression = ({ devis, handleInputChange, darkMode, parametres }) =>
             )}
           </>
         ))}
-        {renderOption("Tarif impression résine", (
+        {renderOption("Tarif impression résine / Prototypage", (
           <>
             {renderTarifSelect('tarifImpressionResine', parametres.prixImpressionResine)}
             {devis.tarifImpressionResine === 'custom' && (
@@ -103,24 +100,9 @@ const TarifsImpression = ({ devis, handleInputChange, darkMode, parametres }) =>
             )}
           </>
         ))}
-        {renderOption("Type de livraison", (
-          <CustomSelect
-            options={Object.entries(parametres.prixLivraison || {}).map(([type, prix]) => ({
-              value: type,
-              label: `${type} - ${prix}€`
-            }))}
-            value={devis.typeLivraison || ''}
-            onChange={(value) => {
-              handleInputChange('typeLivraison', value);
-              handleInputChange('prixLivraison', parametres.prixLivraison[value] || 0);
-            }}
-            className={inputClass}
-            darkMode={darkMode}
-          />
-        ))}
       </div>
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">
-        <h3 className="text-xl font-semibold text-center mb-2">Total Impression et Livraison</h3>
+        <h3 className="text-xl font-semibold text-center mb-2">Total Impression 3D et Fonte</h3>
         <p className="text-3xl text-center font-bold text-teal-600 dark:text-teal-300">
           {calculerTotal().toFixed(2)} €
         </p>

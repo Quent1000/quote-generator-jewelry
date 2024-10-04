@@ -3,7 +3,7 @@ import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import CustomSelect from './CustomSelect';
 
-const ComposantsEtAutres = ({ devis, handleInputChange, darkMode }) => {
+const ComposantsEtAutres = ({ devis, handleInputChange, handleComposantChange, darkMode }) => {
   const [composantsFrequents, setComposantsFrequents] = useState([]);
   const [composantsLibres, setComposantsLibres] = useState(devis.composantsLibres || []);
   const [composantsFrequentsSelectionnes, setComposantsFrequentsSelectionnes] = useState(devis.composantsFrequents || []);
@@ -50,26 +50,31 @@ const ComposantsEtAutres = ({ devis, handleInputChange, darkMode }) => {
   );
 
   const ajouterComposantLibre = () => {
-    setComposantsLibres([...composantsLibres, { description: '', prix: '' }]);
+    const nouveauComposant = { description: '', prix: '' };
+    setComposantsLibres([...composantsLibres, nouveauComposant]);
+    handleComposantChange(composantsLibres.length, 'composant', nouveauComposant, 'composantsLibres');
   };
 
   const handleComposantLibreChange = (index, champ, valeur) => {
     const nouveauxComposants = [...composantsLibres];
-    nouveauxComposants[index][champ] = valeur;
+    nouveauxComposants[index] = { ...nouveauxComposants[index], [champ]: valeur };
     setComposantsLibres(nouveauxComposants);
+    handleComposantChange(index, champ, valeur, 'composantsLibres');
   };
 
   const handleComposantFrequentChange = (selectedValue) => {
     const composantSelectionne = composantsFrequents.find(c => c.id === selectedValue);
     if (composantSelectionne) {
-      setComposantsFrequentsSelectionnes([...composantsFrequentsSelectionnes, composantSelectionne]);
+      const nouveauxComposants = [...composantsFrequentsSelectionnes, composantSelectionne];
+      setComposantsFrequentsSelectionnes(nouveauxComposants);
+      handleComposantChange(nouveauxComposants.length - 1, 'composant', composantSelectionne, 'composantsFrequents');
     }
   };
 
   const retirerComposantFrequent = (index) => {
-    const nouveauxComposants = [...composantsFrequentsSelectionnes];
-    nouveauxComposants.splice(index, 1);
+    const nouveauxComposants = composantsFrequentsSelectionnes.filter((_, i) => i !== index);
     setComposantsFrequentsSelectionnes(nouveauxComposants);
+    handleInputChange('composantsFrequents', nouveauxComposants);
   };
 
   const calculerTotal = () => {
