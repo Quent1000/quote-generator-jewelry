@@ -8,11 +8,10 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
   console.log("ID du client sélectionné:", devis.client);
 
   const formatPrix = (prix) => `${parseFloat(prix || 0).toFixed(2)} €`;
-  const formatTemps = (temps) => {
-    const totalMinutes = Object.values(temps).reduce((acc, t) => acc + (t.heures || 0) * 60 + (t.minutes || 0), 0);
-    const heures = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${heures}h ${minutes}min`;
+  const formatTemps = (minutes) => {
+    const heures = Math.floor(minutes / 60);
+    const minutesRestantes = minutes % 60;
+    return `${heures}h ${minutesRestantes}min`;
   };
 
   const bgClass = darkMode ? 'bg-gray-800' : 'bg-white';
@@ -58,6 +57,13 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     }, 0);
   };
 
+  const calculerTempsTotal = () => {
+    const temps = devis.tempsProduction || {};
+    return Object.values(temps).reduce((total, t) => {
+      return total + (t.heures || 0) * 60 + (t.minutes || 0);
+    }, 0);
+  };
+
   const calculerTotalSertissage = () => {
     const sertissageDiamants = devis.diamants.reduce((acc, d) => acc + (d.prixSertissage || 0), 0);
     const sertissageAutresPierres = devis.autresPierres.reduce((acc, p) => acc + (p.prixSertissage || 0), 0);
@@ -88,20 +94,25 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
   };
 
   const calculerTotalGeneral = () => {
-    const coutMateriau = parseFloat(devis.valeurMetal) || 0;
-    const coutPierres = (devis.diamants?.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0) || 0) +
-                        (devis.autresPierres?.reduce((acc, p) => acc + (parseFloat(p.prixTotal) || 0), 0) || 0);
-    const coutSertissage = calculerTotalSertissage();
-    const coutProduction = calculerTotalTemps();
-    const coutImpression = parseFloat(devis.tarifFonte || 0) + 
-                           parseFloat(devis.tarifImpressionCire || 0) + 
-                           parseFloat(devis.tarifImpressionResine || 0);
+    const totalDiamantsAvecMarge = calculerTotalDiamantsAvecMarge();
+    const totalAutresPierresAvecMarge = calculerTotalAutresPierresAvecMarge();
+    const totalSertissageAvecMarge = calculerTotalSertissageAvecMarge();
+    const totalComposantsAvecMarge = calculerTotalComposantsAvecMarge();
+    const totalGravureEtFinitionAvecMarge = calculerTotalGravureEtFinitionAvecMarge();
+    const totalAutresPrestations = calculerTotalAutresPrestations();
+    const fraisFontePalladium = calculerFraisFontePalladium();
     const coutLivraison = parseFloat(devis.prixLivraison || 0);
-    const coutComposants = calculerTotalComposants();
-    const coutGravureEtFinition = calculerTotalGravureEtFinition();
 
-    const totalAvantRemise = coutMateriau + coutPierres + coutSertissage + coutProduction + coutImpression + coutLivraison + coutComposants + coutGravureEtFinition;
-    
+    const totalAvantRemise = 
+      totalDiamantsAvecMarge + 
+      totalAutresPierresAvecMarge + 
+      totalSertissageAvecMarge + 
+      totalComposantsAvecMarge + 
+      totalGravureEtFinitionAvecMarge + 
+      totalAutresPrestations + 
+      fraisFontePalladium + 
+      coutLivraison;
+
     // Calcul de la remise
     let remiseAmount = 0;
     if (devis.remise.type === 'pourcentage') {
@@ -166,6 +177,57 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     </div>
   );
 
+  const renderTempsProduction = () => {
+    return Object.entries(devis.tempsProduction).map(([type, temps]) => {
+      const heures = temps.heures || 0;
+      const minutes = temps.minutes || 0;
+      const tempsTotal = heures + minutes / 60;
+      const cout = tempsTotal * (tauxHoraires[type] || 0);
+      return (
+        <div key={type} className="flex justify-between">
+          <span className="capitalize">{type}:</span>
+          <span>{`${heures}h ${minutes}min - ${formatPrix(cout)}`}</span>
+        </div>
+      );
+    });
+  };
+
+  const calculerTotalImpression3DEtFonte = () => {
+    const tarifFonte = parseFloat(devis.tarifFonte) || 0;
+    const tarifImpressionCire = parseFloat(devis.tarifImpressionCire) || 0;
+    const tarifImpressionResine = parseFloat(devis.tarifImpressionResine) || 0;
+    return tarifFonte + tarifImpressionCire + tarifImpressionResine;
+  };
+
+  // Nouvelles fonctions de calcul
+  const calculerTotalDiamantsAvecMarge = () => {
+    const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0);
+    return totalDiamants * (1 + parametres.margeDiamantsRondsFournis / 100);
+  };
+
+  const calculerTotalAutresPierresAvecMarge = () => {
+    const totalAutresPierres = devis.autresPierres.reduce((acc, p) => acc + (parseFloat(p.prixTotal) || 0), 0);
+    return totalAutresPierres * (1 + parametres.margeAutresPierresFournis / 100);
+  };
+
+  const calculerTotalSertissageAvecMarge = () => {
+    return calculerTotalSertissage() * (1 + parametres.margeSertissage / 100);
+  };
+
+  const calculerTotalComposantsAvecMarge = () => {
+    return calculerTotalComposants() * (1 + parametres.margeComposants / 100);
+  };
+
+  const calculerTotalGravureEtFinitionAvecMarge = () => {
+    return calculerTotalGravureEtFinition() * (1 + parametres.margePoinconEtGravure / 100);
+  };
+
+  const calculerTotalAutresPrestations = () => {
+    const totalTemps = calculerTotalTemps();
+    const totalImpression = calculerTotalImpression3DEtFonte();
+    return (totalTemps + totalImpression) * (1 + parametres.margeGlobale / 100);
+  };
+
   return (
     <div className={`${bgClass} ${textClass} shadow-lg rounded-xl p-6 border ${borderClass}`}>
       <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
@@ -190,8 +252,17 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
       </Section>
 
       <Section title="Temps de production">
-        <InfoItem label="Temps total" value={formatTemps(devis.tempsProduction)} />
-        <InfoItem label="Coût total" value={formatPrix(calculerTotalTemps())} />
+        <div className="col-span-2">
+          {renderTempsProduction()}
+          <div className="mt-2 font-semibold">
+            <span>Total temps de production:</span>
+            <span className="float-right">{formatTemps(calculerTempsTotal())}</span>
+          </div>
+          <div className="mt-1 font-semibold">
+            <span>Coût total temps de production:</span>
+            <span className="float-right">{formatPrix(calculerTotalTemps())}</span>
+          </div>
+        </div>
       </Section>
 
       <Section title="Diamants et pierres">
@@ -231,9 +302,22 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
       </Section>
 
       <Section title="Impression 3D et Fonte">
-        <InfoItem label="Tarif fonte" value={formatPrix(devis.tarifFonte === 'custom' ? devis.tarifFonteCustom : devis.tarifFonte)} />
-        <InfoItem label="Tarif impression cire" value={formatPrix(devis.tarifImpressionCire === 'custom' ? devis.tarifImpressionCireCustom : devis.tarifImpressionCire)} />
-        <InfoItem label="Tarif impression résine / Prototypage" value={formatPrix(devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine)} />
+        <InfoItem 
+          label="Tarif fonte" 
+          value={formatPrix(devis.tarifFonte)}
+        />
+        <InfoItem 
+          label="Tarif impression cire" 
+          value={formatPrix(devis.tarifImpressionCire)}
+        />
+        <InfoItem 
+          label="Tarif impression résine" 
+          value={formatPrix(devis.tarifImpressionResine)}
+        />
+        <InfoItem 
+          label="Total Impression 3D et Fonte" 
+          value={formatPrix(calculerTotalImpression3DEtFonte())}
+        />
       </Section>
 
       <Section title="Composants">
@@ -329,6 +413,19 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
           />
           <span>{devis.remise.type === 'pourcentage' ? '%' : '€'}</span>
         </div>
+      </Section>
+
+      <Section title="Récapitulatif des coûts">
+        <InfoItem label="Prix total Diamants Rond avec marge" value={formatPrix(calculerTotalDiamantsAvecMarge())} />
+        <InfoItem label="Prix total Autres Pierres avec marge" value={formatPrix(calculerTotalAutresPierresAvecMarge())} />
+        <InfoItem label="Prix total Sertissage avec marge" value={formatPrix(calculerTotalSertissageAvecMarge())} />
+        <InfoItem label="Prix total Composants avec marge" value={formatPrix(calculerTotalComposantsAvecMarge())} />
+        <InfoItem label="Prix total Gravure et Finition avec marge" value={formatPrix(calculerTotalGravureEtFinitionAvecMarge())} />
+        <InfoItem label="Prix total Autres prestations" value={formatPrix(calculerTotalAutresPrestations())} />
+        {devis.metal === "Or Gris Palladié" && (
+          <InfoItem label="Frais fonte Or Gris Palladié" value={formatPrix(calculerFraisFontePalladium())} />
+        )}
+        <InfoItem label="Prix livraison" value={formatPrix(devis.prixLivraison)} />
       </Section>
 
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">

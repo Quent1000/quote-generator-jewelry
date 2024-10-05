@@ -55,6 +55,19 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     </div>
   );
 
+  const handlePoidsChange = (e) => {
+    let value = e.target.value;
+    
+    // Autoriser la saisie de points, de virgules et de chiffres
+    if (/^[0-9]*[.,]?[0-9]*$/.test(value)) {
+      // Remplacer la virgule par un point pour le stockage
+      value = value.replace(',', '.');
+      
+      // Mettre à jour l'état avec la valeur sous forme de chaîne
+      handleInputChange('poidsEstime', value);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Informations et détails</h2>
@@ -137,11 +150,10 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
         ))}
         {renderOption("Poids estimé (g)", (
           <input
-            type="number"
+            type="text"
             value={devis.poidsEstime}
-            onChange={(e) => handleInputChange('poidsEstime', parseFloat(e.target.value))}
+            onChange={handlePoidsChange}
             className={inputClass}
-            step="0.01"
             placeholder="ex : 3.5"
           />
         ))}
