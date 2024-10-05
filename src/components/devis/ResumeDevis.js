@@ -1,7 +1,7 @@
 import React from 'react';
 import CustomSelect from './CustomSelect';
 
-const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange }) => {
+const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
   // Supprimez l'état local de remise
 
   console.log("Clients dans ResumeDevis:", clients);
@@ -438,6 +438,19 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
             (Remise appliquée : {devis.remise.type === 'pourcentage' ? `${devis.remise.valeur}%` : formatPrix(devis.remise.valeur)})
           </p>
         )}
+      </div>
+
+      <div className="mt-8">
+        <button
+          onClick={handleSubmit}
+          className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
+            darkMode
+              ? 'bg-teal-600 text-white hover:bg-teal-700'
+              : 'bg-teal-500 text-white hover:bg-teal-600'
+          }`}
+        >
+          Créer le devis
+        </button>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import NouveauClientPopup from '../components/clients/NouveauClientPopup';
 import DiamantsPierres from '../components/devis/DiamantsPierres';
 import ComposantsEtAutres from '../components/devis/ComposantsEtAutres'; // Ajoutez cette ligne
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 // Importation des composants
 import InformationsEtDetails from '../components/devis/InformationsEtDetails';
@@ -520,6 +521,53 @@ const PageCreerDevisV2 = () => {
     });
   };
 
+  const handlePreviousTab = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
+
+  const handleNextTab = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    }
+  };
+
+  const renderNavButtons = () => {
+    if (activeTab === 'resume') return null;
+
+    return (
+      <div className="flex justify-between mt-6">
+        <button
+          onClick={handlePreviousTab}
+          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+            darkMode
+              ? 'bg-gray-700 text-white hover:bg-gray-600'
+              : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+          }`}
+          disabled={activeTab === tabs[0].id}
+        >
+          <ChevronLeftIcon className="w-5 h-5 mr-2" />
+          Précédent
+        </button>
+        <button
+          onClick={handleNextTab}
+          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+            darkMode
+              ? 'bg-teal-600 text-white hover:bg-teal-700'
+              : 'bg-teal-500 text-white hover:bg-teal-600'
+          }`}
+          disabled={activeTab === tabs[tabs.length - 1].id}
+        >
+          Suivant
+          <ChevronRightIcon className="w-5 h-5 ml-2" />
+        </button>
+      </div>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'informations':
@@ -627,6 +675,7 @@ const PageCreerDevisV2 = () => {
             handleInputChange={handleInputChange}
             tauxHoraires={tauxHoraires}
             handleRemiseChange={handleRemiseChange}
+            handleSubmit={handleSubmit}  // Ajoutez cette ligne
           />
         ) : (
           <div>Chargement des données client...</div>
@@ -668,13 +717,7 @@ const PageCreerDevisV2 = () => {
       </div>
       <form onSubmit={(e) => e.preventDefault()}>
         {renderTabContent()}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors mt-4"
-        >
-          Créer le devis
-        </button>
+        {renderNavButtons()}
       </form>
       {showNouveauClientPopup && (
         <NouveauClientPopup
