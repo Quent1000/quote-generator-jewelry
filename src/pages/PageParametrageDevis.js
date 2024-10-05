@@ -48,6 +48,7 @@ const PageParametrageDevis = () => {
       "Or jaune 24K": 0,
       "Or jaune 2N": 0
     },
+    fraisFontePalladium: 0, // Renommé ici
     prixRhodiage: 0,
     prixLivraison: {
       "VD La Poste": 30, // Anciennement "International"
@@ -539,21 +540,31 @@ const PageParametrageDevis = () => {
               </div>
             </Tab.Panel>
             <Tab.Panel>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <h3 className="text-xl font-semibold mb-4">Prix des métaux</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {Object.entries(parametres.prixMetaux).map(([metal, prix]) => (
                   <div key={metal}>
-                    <label className="block mb-2">{metal} (€/kg)</label>
+                    <label className="block mb-2">{metal}</label>
                     <input
                       type="number"
                       value={prix}
                       onChange={(e) => handleNestedInputChange('prixMetaux', metal, e.target.value)}
                       className={inputClass}
-                      min="0"
                       step="0.01"
-                      placeholder="ex: 72000"
                     />
                   </div>
                 ))}
+                {/* Ajout du nouvel élément Frais Fonte Palladium */}
+                <div>
+                  <label className="block mb-2">Frais Fonte Palladium (€/g)</label>
+                  <input
+                    type="number"
+                    value={parametres.fraisFontePalladium}
+                    onChange={(e) => handleInputChange('fraisFontePalladium', parseFloat(e.target.value))}
+                    className={inputClass}
+                    step="0.01"
+                  />
+                </div>
               </div>
             </Tab.Panel>
             <Tab.Panel>

@@ -64,6 +64,29 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     return sertissageDiamants + sertissageAutresPierres;
   };
 
+  const calculerTotalGravureEtFinition = () => {
+    let total = 0;
+    if (devis.gravure && devis.styleGravure) {
+      total += parseFloat(parametres.prixGravure[devis.styleGravure] || 0);
+    }
+    if (devis.options.rhodiage) {
+      total += parseFloat(parametres.prixRhodiage || 0);
+    }
+    if (devis.options.gravureLogoMarque) {
+      total += parseFloat(parametres.prixPoincons.marque.gravureLogoMarque || 0);
+    }
+    if (devis.options.gravureNumeroSerie) {
+      total += parseFloat(parametres.prixPoincons.marque.gravureNumeroSerie || 0);
+    }
+    if (devis.options.poinconMaitre) {
+      total += parseFloat(parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre] || 0);
+    }
+    if (devis.options.poinconTitre) {
+      total += parseFloat(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre] || 0);
+    }
+    return total;
+  };
+
   const calculerTotalGeneral = () => {
     const coutMateriau = parseFloat(devis.valeurMetal) || 0;
     const coutPierres = (devis.diamants?.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0) || 0) +
@@ -75,8 +98,9 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
                            parseFloat(devis.tarifImpressionResine || 0);
     const coutLivraison = parseFloat(devis.prixLivraison || 0);
     const coutComposants = calculerTotalComposants();
+    const coutGravureEtFinition = calculerTotalGravureEtFinition();
 
-    const totalAvantRemise = coutMateriau + coutPierres + coutSertissage + coutProduction + coutImpression + coutLivraison + coutComposants;
+    const totalAvantRemise = coutMateriau + coutPierres + coutSertissage + coutProduction + coutImpression + coutLivraison + coutComposants + coutGravureEtFinition;
     
     // Calcul de la remise
     let remiseAmount = 0;
@@ -110,6 +134,38 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
   console.log("Composants libres:", devis.composantsLibres);
   console.log("Total composants:", calculerTotalComposants());
 
+  const calculerFraisFontePalladium = () => {
+    if (devis.metal === "Or Gris Palladié" && devis.poidsEstime && parametres.fraisFontePalladium) {
+      return parseFloat(devis.poidsEstime) * parseFloat(parametres.fraisFontePalladium);
+    }
+    return 0;
+  };
+
+  const renderComposants = (composants, titre) => (
+    <div className="col-span-2">
+      <h4 className="font-semibold mb-2">{titre}</h4>
+      {composants.map((composant, index) => (
+        <div key={index} className="mb-1 text-sm">
+          <span>{composant.description || composant.nom}</span>
+          <span className="mx-1">|</span>
+          <span>Prix : {formatPrix(composant.prix)}</span>
+          {composant.quantite && (
+            <>
+              <span className="mx-1">|</span>
+              <span>Quantité : {composant.quantite}</span>
+            </>
+          )}
+          {composant.prixTotal && (
+            <>
+              <span className="mx-1">|</span>
+              <span>Total : {formatPrix(composant.prixTotal)}</span>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className={`${bgClass} ${textClass} shadow-lg rounded-xl p-6 border ${borderClass}`}>
       <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
@@ -125,6 +181,12 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
         <InfoItem label="Poids estimé" value={devis.poidsEstime ? `${devis.poidsEstime} g` : null} />
         <InfoItem label="Taille" value={devis.taille} />
         <InfoItem label="Description" value={devis.description} />
+        {devis.metal === "Or Gris Palladié" && (
+          <InfoItem 
+            label="Frais fonte Or Gris Palladié" 
+            value={formatPrix(calculerFraisFontePalladium())}
+          />
+        )}
       </Section>
 
       <Section title="Temps de production">
@@ -175,11 +237,54 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
       </Section>
 
       <Section title="Composants">
-        <InfoItem label="Composants fréquents" value={devis.composantsFrequents?.length || 0} />
-        <InfoItem label="Composants libres" value={devis.composantsLibres?.length || 0} />
+        {renderComposants(devis.composantsFrequents, "Composants fréquents")}
+        {renderComposants(devis.composantsLibres, "Composants libres")}
         <InfoItem 
           label="Total composants" 
           value={formatPrix(calculerTotalComposants())}
+        />
+      </Section>
+
+      <Section title="Gravure et Finition">
+        {devis.gravure && devis.styleGravure && (
+          <InfoItem 
+            label="Gravure" 
+            value={`${devis.gravure} - ${devis.styleGravure} (${formatPrix(parametres.prixGravure[devis.styleGravure])})`} 
+          />
+        )}
+        {devis.options.rhodiage && (
+          <InfoItem label="Rhodiage" value={formatPrix(parametres.prixRhodiage)} />
+        )}
+        {devis.options.gravureLogoMarque && (
+          <InfoItem 
+            label="Gravure logo marque" 
+            value={formatPrix(parametres.prixPoincons.marque.gravureLogoMarque)} 
+          />
+        )}
+        {devis.options.gravureNumeroSerie && (
+          <InfoItem 
+            label="Gravure numéro de série" 
+            value={formatPrix(parametres.prixPoincons.marque.gravureNumeroSerie)} 
+          />
+        )}
+        {devis.options.poinconMaitre && (
+          <InfoItem 
+            label="Poinçon maître" 
+            value={`${devis.options.poinconMaitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre])}`} 
+          />
+        )}
+        {devis.options.poinconTitre && (
+          <InfoItem 
+            label="Poinçon titre" 
+            value={`${devis.options.poinconTitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre])}`} 
+          />
+        )}
+        {devis.options.marque && (
+          <InfoItem label="Marque" value={devis.options.marque} />
+        )}
+        <InfoItem 
+          label="Total Gravure et Finition" 
+          value={formatPrix(calculerTotalGravureEtFinition())}
         />
       </Section>
 
