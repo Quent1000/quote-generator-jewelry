@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import CustomSelect from './CustomSelect';
 
 const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
-  // Supprimez l'état local de remise
+  // Utilisez directement les valeurs calculées du devis si nécessaire
+  const { totalMetal, totalDiamants /* ... autres champs calculés */ } = devis;
 
-  console.log("Clients dans ResumeDevis:", clients);
-  console.log("ID du client sélectionné:", devis.client);
+  // Si vous avez besoin d'utiliser ces valeurs, faites-le ici
+  // Par exemple :
+  useEffect(() => {
+    console.log("Total métal:", totalMetal);
+    console.log("Total diamants:", totalDiamants);
+  }, [totalMetal, totalDiamants]);
 
   const formatPrix = (prix) => `${parseFloat(prix || 0).toFixed(2)} €`;
   const formatTemps = (minutes) => {
@@ -228,6 +233,15 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     return (totalTemps + totalImpression) * (1 + parametres.margeGlobale / 100);
   };
 
+  useEffect(() => {
+    // Définir la date de validité à 30 jours à partir de la date actuelle si elle n'est pas déjà définie
+    if (!devis.validUntil) {
+      const defaultValidUntil = new Date();
+      defaultValidUntil.setDate(defaultValidUntil.getDate() + 30);
+      handleInputChange('validUntil', defaultValidUntil.toISOString().split('T')[0]);
+    }
+  }, [devis.validUntil, handleInputChange]);
+
   return (
     <div className={`${bgClass} ${textClass} shadow-lg rounded-xl p-6 border ${borderClass}`}>
       <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
@@ -426,6 +440,14 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
           <InfoItem label="Frais fonte Or Gris Palladié" value={formatPrix(calculerFraisFontePalladium())} />
         )}
         <InfoItem label="Prix livraison" value={formatPrix(devis.prixLivraison)} />
+      </Section>
+
+      <Section title="Informations supplémentaires">
+        <InfoItem label="Statut" value={devis.status} />
+        <InfoItem label="Version" value={devis.version} />
+        <InfoItem label="Devise" value={devis.currency} />
+        <InfoItem label="Valide jusqu'au" value={devis.validUntil ? new Date(devis.validUntil).toLocaleDateString() : 'Non spécifié'} />
+        <InfoItem label="Conditions de paiement" value={devis.paymentTerms || 'Non spécifiées'} />
       </Section>
 
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">

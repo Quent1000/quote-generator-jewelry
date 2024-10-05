@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAppContext } from '../../context/AppContext';
-import { HomeIcon, UserIcon, CogIcon, DocumentTextIcon, UserGroupIcon, ChartBarIcon, SunIcon, MoonIcon, ArrowLeftOnRectangleIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, UserIcon, CogIcon, DocumentTextIcon, UserGroupIcon, ChartBarIcon, SunIcon, MoonIcon, ArrowLeftOnRectangleIcon, UsersIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import logo from '../../assets/devisapp-logo.png'; // Assurez-vous que le chemin est correct
 
 const Sidebar = () => {
@@ -15,8 +15,8 @@ const Sidebar = () => {
     { title: 'Accueil', icon: <HomeIcon className="w-6 h-6" />, link: '/' },
     { title: 'Tableau de bord', icon: <ChartBarIcon className="w-6 h-6" />, link: '/tableau-de-bord' },
     { title: 'Clients', icon: <UserGroupIcon className="w-6 h-6" />, link: '/clients' },
+    { title: 'Devis', icon: <DocumentDuplicateIcon className="w-6 h-6" />, link: '/devis' },
     { title: 'Créer un devis', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis' },
-   // { title: 'Créer un devis (V2)', icon: <DocumentTextIcon className="w-6 h-6" />, link: '/creer-devis-v2' },
     { title: 'Paramétrage devis', icon: <CogIcon className="w-6 h-6" />, link: '/parametrage-devis', role: 'admin' },
     { title: 'Profil', icon: <UserIcon className="w-6 h-6" />, link: '/profil' },
     { title: 'Gestion utilisateurs', icon: <UsersIcon className="w-6 h-6" />, link: '/gestion-utilisateurs', role: 'admin' },

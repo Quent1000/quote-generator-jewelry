@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CustomSelect from './CustomSelect';
 import CustomClientSelect from './CustomClientSelect';
+import { PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, setShowNouveauClientPopup, darkMode, clients, metaux, valeurMetal, onMetalChange, isOrGrisSelected }) => {
+  const [showTagDialog, setShowTagDialog] = useState(false);
+  const [newTag, setNewTag] = useState('');
+
   const categories = {
     "Bague": ["Alliance", "Bague de fiançailles", "Chevalière", "Solitaire", "Autre"],
     "Bracelet": ["Jonc", "Chaîne", "Manchette", "Tennis", "Autre"],
@@ -66,6 +70,22 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
       // Mettre à jour l'état avec la valeur sous forme de chaîne
       handleInputChange('poidsEstime', value);
     }
+  };
+
+  const handleAddTag = () => {
+    setShowTagDialog(true);
+  };
+
+  const handleTagSubmit = () => {
+    if (newTag.trim()) {
+      handleInputChange('tags', [...devis.tags, newTag.trim()]);
+      setNewTag('');
+      setShowTagDialog(false);
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    handleInputChange('tags', devis.tags.filter(tag => tag !== tagToRemove));
   };
 
   return (
@@ -167,7 +187,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 mt-4">
         {renderOption("Description", (
           <textarea
             value={devis.description}
@@ -185,6 +205,75 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
           />
         ))}
       </div>
+
+      <div className="mt-4">
+        {renderOption("Conditions de paiement", (
+          <input
+            type="text"
+            value={devis.paymentTerms}
+            onChange={(e) => handleInputChange('paymentTerms', e.target.value)}
+            className={inputClass}
+            placeholder="Ex: 50% à la commande, 50% à la livraison"
+          />
+        ))}
+      </div>
+
+      <div className="mt-4">
+        {renderOption("Tags", (
+          <div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {devis.tags.map(tag => (
+                <span key={tag} className="bg-teal-100 text-teal-800 px-2 py-1 rounded-full text-sm flex items-center">
+                  {tag}
+                  <XMarkIcon className="w-4 h-4 ml-1 cursor-pointer" onClick={() => handleRemoveTag(tag)} />
+                </span>
+              ))}
+            </div>
+            <button
+              onClick={handleAddTag}
+              className="flex items-center text-teal-600 hover:text-teal-700"
+            >
+              <PlusIcon className="w-5 h-5 mr-1" />
+              Ajouter un tag
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {showTagDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className="text-lg font-semibold mb-4">Ajouter un nouveau tag</h3>
+            <input
+              type="text"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              className={`w-full p-2 border rounded ${
+                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+              } focus:border-teal-500 focus:ring-2 focus:ring-teal-200`}
+              placeholder="Entrez un nouveau tag"
+            />
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowTagDialog(false)}
+                className="mr-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleTagSubmit}
+                className={`px-4 py-2 rounded ${
+                  darkMode
+                    ? 'bg-teal-600 text-white hover:bg-teal-700'
+                    : 'bg-teal-500 text-white hover:bg-teal-600'
+                }`}
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

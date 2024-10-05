@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { db, storage, getNextDevisNumber } from '../firebase';  // Ajoutez getNextDevisNumber ici
+import { db, storage, getNextDevisNumber, auth } from '../firebase';  // Ajoutez getNextDevisNumber ici
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +17,7 @@ import TempsProduction from '../components/devis/TempsProduction';
 import TarifsImpression from '../components/devis/TarifsImpression';
 import ImagesDevis from '../components/devis/ImagesDevis';
 import ResumeDevis from '../components/devis/ResumeDevis'; // Créez ce composant
+import { calculateDevis } from '../utils/devisUtils';
 
 const PageCreerDevisV2 = () => {
   const { darkMode } = useAppContext();
@@ -81,6 +82,16 @@ const PageCreerDevisV2 = () => {
     remise: { type: 'pourcentage', valeur: 0 },
     composantsFrequents: [],
     composantsLibres: [],
+    createdBy: '', // ID de l'utilisateur créateur
+    createdAt: null, // Date de création
+    updatedAt: null, // Date de dernière modification
+    status: 'brouillon', // Statut du devis
+    version: 1, // Numéro de version
+    tags: [], // Tags ou catégories
+    currency: 'EUR', // Devise
+    validUntil: null, // Date de validité
+    paymentTerms: '', // Conditions de paiement
+    internalNotes: '', // Notes internes
   });
 
 
@@ -141,6 +152,10 @@ const PageCreerDevisV2 = () => {
 
   // Ajoutez cet état pour stocker le numéro de devis
   const [devisNumber, setDevisNumber] = useState(null);
+
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -428,26 +443,38 @@ const PageCreerDevisV2 = () => {
       const imageUrls = await Promise.all(images.map(uploadImage));
       
       const newDevisNumber = await getNextDevisNumber();
-      setDevisNumber(newDevisNumber); // Mettez à jour l'état avec le nouveau numéro de devis
+      setDevisNumber(newDevisNumber);
+      
+      const currentUser = auth.currentUser; // Assurez-vous d'importer auth depuis firebase
       
       const newDevis = {
         ...devis,
         numeroDevis: `DEV-${newDevisNumber.toString().padStart(5, '0')}`,
-        dateCreation: new Date().toISOString(),
+        createdBy: currentUser ? currentUser.uid : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'brouillon',
+        version: 1,
+        currency: 'EUR',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Valide 30 jours par défaut
         images: imageUrls,
         imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null
       };
 
       console.log("Devis à envoyer:", newDevis);
 
-      // Ajouter le devis à Firestore
       const docRef = await addDoc(collection(db, 'devis'), newDevis);
       console.log("Document written with ID: ", docRef.id);
-      alert('Devis créé avec succès !');
-      // Réinitialiser le formulaire ou rediriger
+      setAlertMessage('Devis créé avec succès !');
+      setAlertType('success');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 5000); // Masquer l'alerte après 5 secondes
     } catch (error) {
       console.error("Erreur détaillée lors de la création du devis :", error);
-      alert(`Une erreur est survenue lors de la création du devis : ${error.message}`);
+      setAlertMessage(`Une erreur est survenue lors de la création du devis : ${error.message}`);
+      setAlertType('error');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 5000); // Masquer l'alerte après 5 secondes
     }
   };
 
@@ -521,49 +548,42 @@ const PageCreerDevisV2 = () => {
     });
   };
 
-  const handlePreviousTab = () => {
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-    if (currentIndex > 0) {
-      setActiveTab(tabs[currentIndex - 1].id);
-    }
-  };
-
-  const handleNextTab = () => {
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-    if (currentIndex < tabs.length - 1) {
-      setActiveTab(tabs[currentIndex + 1].id);
-    }
-  };
-
   const renderNavButtons = () => {
-    if (activeTab === 'resume') return null;
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    const isFirstTab = currentIndex === 0;
+    const isLastTab = currentIndex === tabs.length - 1;
 
     return (
       <div className="flex justify-between mt-6">
         <button
-          onClick={handlePreviousTab}
-          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-            darkMode
-              ? 'bg-gray-700 text-white hover:bg-gray-600'
-              : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-          }`}
-          disabled={activeTab === tabs[0].id}
-        >
-          <ChevronLeftIcon className="w-5 h-5 mr-2" />
-          Précédent
-        </button>
-        <button
-          onClick={handleNextTab}
-          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-            darkMode
+          type="button" // Changé de 'submit' à 'button'
+          onClick={() => handleTabChange(tabs[currentIndex - 1].id)}
+          className={`px-4 py-2 rounded-md ${
+            isFirstTab
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : darkMode
               ? 'bg-teal-600 text-white hover:bg-teal-700'
               : 'bg-teal-500 text-white hover:bg-teal-600'
           }`}
-          disabled={activeTab === tabs[tabs.length - 1].id}
+          disabled={isFirstTab}
         >
-          Suivant
-          <ChevronRightIcon className="w-5 h-5 ml-2" />
+          <ChevronLeftIcon className="w-5 h-5 inline-block mr-2" />
+          Précédent
         </button>
+        {!isLastTab && (
+          <button
+            type="button" // Changé de 'submit' à 'button'
+            onClick={() => handleTabChange(tabs[currentIndex + 1].id)}
+            className={`px-4 py-2 rounded-md ${
+              darkMode
+                ? 'bg-teal-600 text-white hover:bg-teal-700'
+                : 'bg-teal-500 text-white hover:bg-teal-600'
+            }`}
+          >
+            Suivant
+            <ChevronRightIcon className="w-5 h-5 inline-block ml-2" />
+          </button>
+        )}
       </div>
     );
   };
@@ -691,6 +711,20 @@ const PageCreerDevisV2 = () => {
     return await getDownloadURL(storageRef);
   };
 
+  const updateDevisCalculations = useCallback(() => {
+    const updatedDevis = calculateDevis(devis, parametres);
+    setDevis(updatedDevis);
+  }, [devis, parametres]);
+
+  useEffect(() => {
+    updateDevisCalculations();
+  }, [
+    devis.metal,
+    devis.poidsMetal,
+    // autres dépendances pertinentes
+    updateDevisCalculations
+  ]); // Supprimez la virgule à la fin de ce tableau
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
       <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
@@ -715,10 +749,10 @@ const PageCreerDevisV2 = () => {
           ))}
         </div>
       </div>
-      <form onSubmit={(e) => e.preventDefault()}>
+      <div>
         {renderTabContent()}
         {renderNavButtons()}
-      </form>
+      </div>
       {showNouveauClientPopup && (
         <NouveauClientPopup
           isOpen={showNouveauClientPopup}
@@ -727,9 +761,15 @@ const PageCreerDevisV2 = () => {
           onClientAdded={handleNouveauClientAdded}
         />
       )}
+      {showAlert && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg ${
+          alertType === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white`}>
+          <p>{alertMessage}</p>
+        </div>
+      )}
     </div>
   );
 };
-
 
 export default PageCreerDevisV2;
