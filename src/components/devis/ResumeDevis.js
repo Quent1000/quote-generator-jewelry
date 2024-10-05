@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import CustomSelect from './CustomSelect';
 
-const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
+const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
+  console.log("ResumeDevis props:", { devis, darkMode, clients, parametres, tauxHoraires });
+
   // Utilisez directement les valeurs calculées du devis si nécessaire
   const { totalMetal, totalDiamants /* ... autres champs calculés */ } = devis;
 
@@ -23,7 +25,7 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
   const textClass = darkMode ? 'text-white' : 'text-gray-900';
   const borderClass = darkMode ? 'border-gray-700' : 'border-gray-200';
 
-  const inputClass = `p-2 border rounded ${
+  const inputClass = `w-full p-2 border rounded ${
     darkMode 
       ? 'bg-gray-700 border-gray-600 text-white' 
       : 'bg-white border-gray-300 text-gray-900'
@@ -134,7 +136,7 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     handleRemiseChange(name === 'type' ? value : devis.remise.type, name === 'valeur' ? value : devis.remise.valeur);
   };
 
-  const calculerTotalComposants = () => {
+  const calculerTotalComposants = useCallback(() => {
     console.log("Composants fréquents:", devis.composantsFrequents);
     console.log("Composants libres:", devis.composantsLibres);
     
@@ -144,18 +146,21 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
     const total = totalFrequents + totalLibres;
     console.log("Total calculé:", total);
     return total;
-  };
+  }, [devis.composantsFrequents, devis.composantsLibres]);
+
+  // Utilisez useMemo pour mémoriser le résultat
+  const totalComposants = useMemo(() => calculerTotalComposants(), [calculerTotalComposants]);
 
   console.log("Composants fréquents:", devis.composantsFrequents);
   console.log("Composants libres:", devis.composantsLibres);
-  console.log("Total composants:", calculerTotalComposants());
+  console.log("Total composants:", totalComposants);
 
-  const calculerFraisFontePalladium = () => {
+  const calculerFraisFontePalladium = useCallback(() => {
     if (devis.metal === "Or Gris Palladié" && devis.poidsEstime && parametres.fraisFontePalladium) {
       return parseFloat(devis.poidsEstime) * parseFloat(parametres.fraisFontePalladium);
     }
     return 0;
-  };
+  }, [devis.metal, devis.poidsEstime, parametres.fraisFontePalladium]);
 
   const renderComposants = (composants, titre) => (
     <div className="col-span-2">
@@ -220,7 +225,7 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
   };
 
   const calculerTotalComposantsAvecMarge = () => {
-    return calculerTotalComposants() * (1 + parametres.margeComposants / 100);
+    return totalComposants * (1 + parametres.margeComposants / 100);
   };
 
   const calculerTotalGravureEtFinitionAvecMarge = () => {
@@ -241,6 +246,16 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
       handleInputChange('validUntil', defaultValidUntil.toISOString().split('T')[0]);
     }
   }, [devis.validUntil, handleInputChange]);
+
+  useEffect(() => {
+    console.log("Devis mis à jour dans ResumeDevis:", devis);
+  }, [devis]);
+
+  useEffect(() => {
+    console.log("ResumeDevis - devis:", devis);
+    console.log("ResumeDevis - parametres:", parametres);
+    console.log("ResumeDevis - options de livraison:", parametres?.prixLivraison);
+  }, [devis, parametres]);
 
   return (
     <div className={`${bgClass} ${textClass} shadow-lg rounded-xl p-6 border ${borderClass}`}>
@@ -339,7 +354,7 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
         {renderComposants(devis.composantsLibres, "Composants libres")}
         <InfoItem 
           label="Total composants" 
-          value={formatPrix(calculerTotalComposants())}
+          value={formatPrix(totalComposants)}
         />
       </Section>
 
@@ -388,6 +403,8 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
 
       <Section title="Livraison">
         <div className="col-span-2">
+          {console.log("Options de livraison:", parametres?.prixLivraison)}
+          {console.log("Type de livraison actuel:", devis.typeLivraison)}
           <CustomSelect
             options={(parametres?.prixLivraison ? Object.entries(parametres.prixLivraison) : []).map(([type, prix]) => ({
               value: type,
@@ -398,8 +415,10 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
               handleInputChange('typeLivraison', value);
               handleInputChange('prixLivraison', parametres?.prixLivraison?.[value] || 0);
             }}
-            className="w-full p-2 border rounded"
+            className={inputClass}
             darkMode={darkMode}
+            isScrollable={true}
+            maxHeight={200}
           />
         </div>
         <InfoItem label="Prix livraison" value={formatPrix(devis.prixLivraison)} />
@@ -476,6 +495,6 @@ const ResumeDevis = ({ devis, darkMode, clients, parametres, handleInputChange, 
       </div>
     </div>
   );
-};
+});
 
 export default ResumeDevis;

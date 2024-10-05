@@ -242,21 +242,53 @@ const PageCreerDevisV2 = () => {
     fetchTauxHoraires();
   }, []);
 
-  const handleInputChange = (field, value) => {
+  const updateDevisCalculations = useCallback(() => {
+    setDevis(prevDevis => calculateDevis(prevDevis, parametres));
+  }, [parametres]);
+
+  useEffect(() => {
+    updateDevisCalculations();
+  }, [
+    devis.metal,
+    devis.poidsEstime,
+    devis.diamants,
+    devis.autresPierres,
+    devis.composantsFrequents,
+    devis.composantsLibres,
+    devis.tempsProduction,
+    devis.tarifFonte,
+    devis.tarifImpressionCire,
+    devis.tarifImpressionResine,
+    devis.prixLivraison,
+    devis.remise,
+    updateDevisCalculations
+  ]);
+
+  const handleInputChange = useCallback((field, value) => {
     setDevis(prevDevis => {
       const newDevis = { ...prevDevis };
-      const fields = field.split('.');
-      let current = newDevis;
-      for (let i = 0; i < fields.length - 1; i++) {
-        if (!current[fields[i]]) {
-          current[fields[i]] = {};
+      if (field.includes('.')) {
+        const [parent, child, grandchild] = field.split('.');
+        if (grandchild) {
+          newDevis[parent] = {
+            ...newDevis[parent],
+            [child]: {
+              ...newDevis[parent][child],
+              [grandchild]: value
+            }
+          };
+        } else {
+          newDevis[parent] = {
+            ...newDevis[parent],
+            [child]: value
+          };
         }
-        current = current[fields[i]];
+      } else {
+        newDevis[field] = value;
       }
-      current[fields[fields.length - 1]] = value;
       return newDevis;
     });
-  };
+  }, []);
 
   const handleOptionsChange = useCallback((option, value) => {
     setDevis(prevDevis => {
@@ -427,16 +459,16 @@ const PageCreerDevisV2 = () => {
     setShowNouveauClientPopup(false);
   };
 
-  const validateDevis = () => {
+  const validateDevis = useCallback(() => {
     const requiredFields = ['client', 'titreDevis', 'categorie', 'metal'];
     for (let field of requiredFields) {
       if (!devis[field]) {
         throw new Error(`Le champ ${field} est requis.`);
       }
     }
-  };
+  }, [devis]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       validateDevis();
@@ -476,7 +508,7 @@ const PageCreerDevisV2 = () => {
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 5000); // Masquer l'alerte après 5 secondes
     }
-  };
+  }, [validateDevis, devis, images, mainImageId]);
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
@@ -522,12 +554,12 @@ const PageCreerDevisV2 = () => {
     });
   }, []);
 
-  const handleRemiseChange = (type, valeur) => {
+  const handleRemiseChange = useCallback((type, valeur) => {
     setDevis(prevDevis => ({
       ...prevDevis,
       remise: { type, valeur: parseFloat(valeur) }
     }));
-  };
+  }, []);
 
   // Ajoutez cette fonction dans le composant PageCreerDevisV2
   const handleComposantChange = (index, field, value, type) => {
@@ -682,20 +714,14 @@ const PageCreerDevisV2 = () => {
       case 'resume':
         return clients.length > 0 ? (
           <ResumeDevis 
-            devis={
-              {
-                ...devis,
-                composantsFrequents: devis.composantsFrequents || [],
-                composantsLibres: devis.composantsLibres || []
-              }
-            }
+            devis={devis}
             darkMode={darkMode} 
             clients={clients} 
             parametres={parametres}
             handleInputChange={handleInputChange}
             tauxHoraires={tauxHoraires}
             handleRemiseChange={handleRemiseChange}
-            handleSubmit={handleSubmit}  // Ajoutez cette ligne
+            handleSubmit={handleSubmit}
           />
         ) : (
           <div>Chargement des données client...</div>
@@ -711,19 +737,9 @@ const PageCreerDevisV2 = () => {
     return await getDownloadURL(storageRef);
   };
 
-  const updateDevisCalculations = useCallback(() => {
-    const updatedDevis = calculateDevis(devis, parametres);
-    setDevis(updatedDevis);
-  }, [devis, parametres]);
-
   useEffect(() => {
-    updateDevisCalculations();
-  }, [
-    devis.metal,
-    devis.poidsMetal,
-    // autres dépendances pertinentes
-    updateDevisCalculations
-  ]); // Supprimez la virgule à la fin de ce tableau
+    console.log("Paramètres mis à jour:", parametres);
+  }, [parametres]);
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
