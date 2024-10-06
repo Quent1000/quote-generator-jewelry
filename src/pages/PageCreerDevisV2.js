@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { db, storage, getNextDevisNumber, auth } from '../firebase';  // Ajoutez getNextDevisNumber ici
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
@@ -261,8 +261,22 @@ const PageCreerDevisV2 = () => {
     devis.tarifImpressionResine,
     devis.prixLivraison,
     devis.remise,
+    devis.options, // Ajoutez cette ligne pour recalculer lorsque les options changent
+    devis.gravure,
+    devis.styleGravure,
     updateDevisCalculations
   ]);
+
+  const memoizedCalculateDevis = useMemo(() => {
+    return (devis, parametres) => calculateDevis(devis, parametres);
+  }, []);
+
+  useEffect(() => {
+    const updatedDevis = memoizedCalculateDevis(devis, parametres);
+    if (JSON.stringify(updatedDevis) !== JSON.stringify(devis)) {
+      setDevis(updatedDevis);
+    }
+  }, [devis, parametres, memoizedCalculateDevis]);
 
   const handleInputChange = useCallback((field, value) => {
     setDevis(prevDevis => {

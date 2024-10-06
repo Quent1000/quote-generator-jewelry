@@ -131,6 +131,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
             onChange={(value) => handleInputChange('categorie', value)}
             className={inputClass}
             darkMode={darkMode}
+            placeholder="Sélectionnez une catégorie"
           />
         ))}
         {renderOption("Sous-catégorie", (
@@ -151,6 +152,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
               onChange={handleMetalChange}
               className={inputClass}
               darkMode={darkMode}
+              placeholder="Sélectionnez un métal"
             />
             {isOrGrisSelected && (
               <p className="mt-2 text-sm text-teal-600 dark:text-teal-400">

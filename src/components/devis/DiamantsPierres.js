@@ -38,10 +38,13 @@ const DiamantsPierres = ({
     }))
   ];
 
-  const sertissageOptions = Object.keys(parametres.prixSertissage || {}).map(type => ({
-    value: type,
-    label: type
-  }));
+  const sertissageOptions = [
+    { value: '', label: 'Sélectionner' },
+    ...Object.keys(parametres.prixSertissage || {}).map(type => ({
+      value: type,
+      label: type
+    }))
+  ];
 
   const fournisseurOptions = [
     { value: 'TGN 409', label: 'TGN 409' },
@@ -210,7 +213,7 @@ const DiamantsPierres = ({
                 <td className="p-2">
                   <CustomSelect
                     options={sertissageOptions}
-                    value={diamant.sertissage}
+                    value={diamant.sertissage || ''}
                     onChange={(value) => handleDiamantChange(index, 'sertissage', value)}
                     className={inputClass}
                     darkMode={darkMode}
@@ -376,7 +379,7 @@ const DiamantsPierres = ({
                   <td className="p-2">
                     <CustomSelect
                       options={sertissageOptions}
-                      value={pierre.sertissage}
+                      value={pierre.sertissage || ''}
                       onChange={(value) => handleAutrePierreChange(index, 'sertissage', value)}
                       className={inputClass}
                       darkMode={darkMode}

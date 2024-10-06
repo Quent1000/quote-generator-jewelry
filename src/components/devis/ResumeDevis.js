@@ -4,26 +4,131 @@ import CustomSelect from './CustomSelect';
 const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
   console.log("ResumeDevis props:", { devis, darkMode, clients, parametres, tauxHoraires });
 
-  // Utilisez directement les valeurs calculées du devis si nécessaire
-  const { totalMetal, totalDiamants /* ... autres champs calculés */ } = devis;
-
-  // Si vous avez besoin d'utiliser ces valeurs, faites-le ici
-  // Par exemple :
-  useEffect(() => {
-    console.log("Total métal:", totalMetal);
-    console.log("Total diamants:", totalDiamants);
-  }, [totalMetal, totalDiamants]);
-
-  const formatPrix = (prix) => `${parseFloat(prix || 0).toFixed(2)} €`;
-  const formatTemps = (minutes) => {
+  const formatPrix = useCallback((prix) => `${parseFloat(prix || 0).toFixed(2)} €`, []);
+  const formatTemps = useCallback((minutes) => {
     const heures = Math.floor(minutes / 60);
     const minutesRestantes = minutes % 60;
     return `${heures}h ${minutesRestantes}min`;
-  };
+  }, []);
+
+  const calculerTotalTemps = useCallback(() => {
+    return Object.entries(devis.tempsProduction).reduce((total, [type, temps]) => {
+      const heures = (temps.heures || 0) + (temps.minutes || 0) / 60;
+      return total + heures * (tauxHoraires[type] || 0);
+    }, 0);
+  }, [devis.tempsProduction, tauxHoraires]);
+
+  const calculerTotalSertissage = useCallback(() => {
+    return devis.diamants.reduce((acc, d) => acc + parseFloat(d.prixSertissage || 0), 0) +
+           devis.autresPierres.reduce((acc, p) => acc + parseFloat(p.prixSertissage || 0), 0);
+  }, [devis.diamants, devis.autresPierres]);
+
+  const calculerTotalGravureEtFinition = useCallback(() => {
+    return parseFloat(devis.totalGravureEtFinition || 0);
+  }, [devis.totalGravureEtFinition]);
+
+  const calculerTotalComposants = useCallback(() => {
+    return (devis.composantsFrequents?.reduce((acc, c) => acc + parseFloat(c.prix || 0), 0) || 0) +
+           (devis.composantsLibres?.reduce((acc, c) => acc + parseFloat(c.prix || 0), 0) || 0);
+  }, [devis.composantsFrequents, devis.composantsLibres]);
+
+  const calculerFraisFontePalladium = useCallback(() => {
+    if (devis.metal === "Or Gris Palladié" && devis.poidsEstime && parametres.fraisFontePalladium) {
+      return parseFloat(devis.poidsEstime) * parseFloat(parametres.fraisFontePalladium);
+    }
+    return 0;
+  }, [devis.metal, devis.poidsEstime, parametres.fraisFontePalladium]);
+
+  const calculerTotalImpression3DEtFonte = useCallback(() => {
+    return parseFloat(devis.tarifFonte || 0) +
+           parseFloat(devis.tarifImpressionCire || 0) +
+           parseFloat(devis.tarifImpressionResine || 0);
+  }, [devis.tarifFonte, devis.tarifImpressionCire, devis.tarifImpressionResine]);
+
+  const calculerTotalAutresPrestations = useCallback(() => {
+    const totalTemps = calculerTotalTemps();
+    const totalImpression = calculerTotalImpression3DEtFonte();
+    console.log("Total temps:", totalTemps);
+    console.log("Total impression 3D et fonte:", totalImpression);
+    const total = (totalTemps + totalImpression) * (1 + parametres.margeGlobale / 100);
+    console.log("Total autres prestations:", total);
+    return total;
+  }, [calculerTotalTemps, calculerTotalImpression3DEtFonte, parametres.margeGlobale]);
+
+  const calculerTotalGravureEtFinitionAvecMarge = useCallback(() => {
+    return calculerTotalGravureEtFinition() * (1 + parametres.margePoinconEtGravure / 100);
+  }, [calculerTotalGravureEtFinition, parametres.margePoinconEtGravure]);
+
+  const calculerTotalGeneral = useCallback(() => {
+    const totalDiamantsAvecMarge = parseFloat(devis.totalDiamants || 0);
+    const totalAutresPierresAvecMarge = parseFloat(devis.totalAutresPierres || 0);
+    const totalSertissageAvecMarge = calculerTotalSertissage() * (1 + parametres.margeSertissage / 100);
+    const totalComposantsAvecMarge = calculerTotalComposants() * (1 + parametres.margeComposants / 100);
+    const totalGravureEtFinitionAvecMarge = calculerTotalGravureEtFinitionAvecMarge();
+    const totalAutresPrestations = calculerTotalAutresPrestations();
+    const fraisFontePalladium = calculerFraisFontePalladium();
+    const coutLivraison = parseFloat(devis.prixLivraison || 0);
+
+    console.log('Calcul du total général:');
+    console.log('Total diamants avec marge:', totalDiamantsAvecMarge);
+    console.log('Total autres pierres avec marge:', totalAutresPierresAvecMarge);
+    console.log('Total sertissage avec marge:', totalSertissageAvecMarge);
+    console.log('Total composants avec marge:', totalComposantsAvecMarge);
+    console.log('Total gravure et finition avec marge:', totalGravureEtFinitionAvecMarge);
+    console.log('Total autres prestations:', totalAutresPrestations);
+    console.log('Frais fonte palladium:', fraisFontePalladium);
+    console.log('Coût livraison:', coutLivraison);
+
+    const total = totalDiamantsAvecMarge +
+                  totalAutresPierresAvecMarge +
+                  totalSertissageAvecMarge +
+                  totalComposantsAvecMarge +
+                  totalGravureEtFinitionAvecMarge +
+                  totalAutresPrestations +
+                  fraisFontePalladium +
+                  coutLivraison;
+
+    console.log('Total avant remise:', total);
+
+    let remiseAmount = 0;
+    if (devis.remise.type === 'pourcentage') {
+      remiseAmount = total * (devis.remise.valeur / 100);
+    } else {
+      remiseAmount = parseFloat(devis.remise.valeur || 0);
+    }
+
+    console.log('Montant de la remise:', remiseAmount);
+
+    const totalGeneral = total - remiseAmount;
+    console.log('Total général final:', totalGeneral);
+
+    return totalGeneral;
+  }, [devis, parametres, calculerTotalSertissage, calculerTotalComposants, calculerTotalAutresPrestations, calculerFraisFontePalladium, calculerTotalGravureEtFinitionAvecMarge]);
+
+  const calculerCoutFabricationNonMarge = useCallback(() => {
+    return (
+      parseFloat(devis.totalDiamants || 0) +
+      parseFloat(devis.totalAutresPierres || 0) +
+      calculerTotalSertissage() +
+      calculerTotalComposants() +
+      calculerTotalGravureEtFinition() +
+      calculerTotalTemps() +
+      calculerTotalImpression3DEtFonte() +
+      (devis.metal === "Or Gris Palladié" ? calculerFraisFontePalladium() : 0) +
+      parseFloat(devis.prixLivraison || 0)
+    );
+  }, [devis, calculerTotalSertissage, calculerTotalComposants, calculerTotalGravureEtFinition, calculerTotalTemps, calculerTotalImpression3DEtFonte, calculerFraisFontePalladium]);
+
+  const calculerMarge = useCallback(() => {
+    const totalGeneral = calculerTotalGeneral();
+    const coutFabricationNonMarge = calculerCoutFabricationNonMarge();
+    console.log("Total général:", totalGeneral);
+    console.log("Coût de fabrication non margé:", coutFabricationNonMarge);
+    return totalGeneral - coutFabricationNonMarge;
+  }, [calculerTotalGeneral, calculerCoutFabricationNonMarge]);
 
   const bgClass = darkMode ? 'bg-gray-800' : 'bg-white';
   const textClass = darkMode ? 'text-white' : 'text-gray-900';
-  const borderClass = darkMode ? 'border-gray-700' : 'border-gray-200';
 
   const inputClass = `w-full p-2 border rounded ${
     darkMode 
@@ -55,15 +160,6 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     </div>
   );
 
-  const calculerTotalTemps = () => {
-    const temps = devis.tempsProduction || {};
-    return Object.entries(temps).reduce((total, [type, t]) => {
-      const heures = (t.heures || 0) + (t.minutes || 0) / 60;
-      const tauxHoraire = tauxHoraires[type] || 0;
-      return total + heures * tauxHoraire;
-    }, 0);
-  };
-
   const calculerTempsTotal = () => {
     const temps = devis.tempsProduction || {};
     return Object.values(temps).reduce((total, t) => {
@@ -71,82 +167,10 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     }, 0);
   };
 
-  const calculerTotalSertissage = () => {
-    const sertissageDiamants = devis.diamants.reduce((acc, d) => acc + (d.prixSertissage || 0), 0);
-    const sertissageAutresPierres = devis.autresPierres.reduce((acc, p) => acc + (p.prixSertissage || 0), 0);
-    return sertissageDiamants + sertissageAutresPierres;
-  };
-
-  const calculerTotalGravureEtFinition = () => {
-    let total = 0;
-    if (devis.gravure && devis.styleGravure) {
-      total += parseFloat(parametres.prixGravure[devis.styleGravure] || 0);
-    }
-    if (devis.options.rhodiage) {
-      total += parseFloat(parametres.prixRhodiage || 0);
-    }
-    if (devis.options.gravureLogoMarque) {
-      total += parseFloat(parametres.prixPoincons.marque.gravureLogoMarque || 0);
-    }
-    if (devis.options.gravureNumeroSerie) {
-      total += parseFloat(parametres.prixPoincons.marque.gravureNumeroSerie || 0);
-    }
-    if (devis.options.poinconMaitre) {
-      total += parseFloat(parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre] || 0);
-    }
-    if (devis.options.poinconTitre) {
-      total += parseFloat(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre] || 0);
-    }
-    return total;
-  };
-
-  const calculerTotalGeneral = () => {
-    const totalDiamantsAvecMarge = calculerTotalDiamantsAvecMarge();
-    const totalAutresPierresAvecMarge = calculerTotalAutresPierresAvecMarge();
-    const totalSertissageAvecMarge = calculerTotalSertissageAvecMarge();
-    const totalComposantsAvecMarge = calculerTotalComposantsAvecMarge();
-    const totalGravureEtFinitionAvecMarge = calculerTotalGravureEtFinitionAvecMarge();
-    const totalAutresPrestations = calculerTotalAutresPrestations();
-    const fraisFontePalladium = calculerFraisFontePalladium();
-    const coutLivraison = parseFloat(devis.prixLivraison || 0);
-
-    const totalAvantRemise = 
-      totalDiamantsAvecMarge + 
-      totalAutresPierresAvecMarge + 
-      totalSertissageAvecMarge + 
-      totalComposantsAvecMarge + 
-      totalGravureEtFinitionAvecMarge + 
-      totalAutresPrestations + 
-      fraisFontePalladium + 
-      coutLivraison;
-
-    // Calcul de la remise
-    let remiseAmount = 0;
-    if (devis.remise.type === 'pourcentage') {
-      remiseAmount = totalAvantRemise * (devis.remise.valeur / 100);
-    } else {
-      remiseAmount = devis.remise.valeur;
-    }
-
-    return totalAvantRemise - remiseAmount;
-  };
-
   const handleRemiseInputChange = (e) => {
     const { name, value } = e.target;
     handleRemiseChange(name === 'type' ? value : devis.remise.type, name === 'valeur' ? value : devis.remise.valeur);
   };
-
-  const calculerTotalComposants = useCallback(() => {
-    console.log("Composants fréquents:", devis.composantsFrequents);
-    console.log("Composants libres:", devis.composantsLibres);
-    
-    const totalFrequents = devis.composantsFrequents?.reduce((acc, c) => acc + (parseFloat(c.prix) || 0), 0) || 0;
-    const totalLibres = devis.composantsLibres?.reduce((acc, c) => acc + (parseFloat(c.prix) || 0), 0) || 0;
-    
-    const total = totalFrequents + totalLibres;
-    console.log("Total calculé:", total);
-    return total;
-  }, [devis.composantsFrequents, devis.composantsLibres]);
 
   // Utilisez useMemo pour mémoriser le résultat
   const totalComposants = useMemo(() => calculerTotalComposants(), [calculerTotalComposants]);
@@ -154,13 +178,6 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   console.log("Composants fréquents:", devis.composantsFrequents);
   console.log("Composants libres:", devis.composantsLibres);
   console.log("Total composants:", totalComposants);
-
-  const calculerFraisFontePalladium = useCallback(() => {
-    if (devis.metal === "Or Gris Palladié" && devis.poidsEstime && parametres.fraisFontePalladium) {
-      return parseFloat(devis.poidsEstime) * parseFloat(parametres.fraisFontePalladium);
-    }
-    return 0;
-  }, [devis.metal, devis.poidsEstime, parametres.fraisFontePalladium]);
 
   const renderComposants = (composants, titre) => (
     <div className="col-span-2">
@@ -202,16 +219,9 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     });
   };
 
-  const calculerTotalImpression3DEtFonte = () => {
-    const tarifFonte = parseFloat(devis.tarifFonte) || 0;
-    const tarifImpressionCire = parseFloat(devis.tarifImpressionCire) || 0;
-    const tarifImpressionResine = parseFloat(devis.tarifImpressionResine) || 0;
-    return tarifFonte + tarifImpressionCire + tarifImpressionResine;
-  };
-
   // Nouvelles fonctions de calcul
   const calculerTotalDiamantsAvecMarge = () => {
-    const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0);
+    const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotal) || 0), 0);
     return totalDiamants * (1 + parametres.margeDiamantsRondsFournis / 100);
   };
 
@@ -226,16 +236,6 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
 
   const calculerTotalComposantsAvecMarge = () => {
     return totalComposants * (1 + parametres.margeComposants / 100);
-  };
-
-  const calculerTotalGravureEtFinitionAvecMarge = () => {
-    return calculerTotalGravureEtFinition() * (1 + parametres.margePoinconEtGravure / 100);
-  };
-
-  const calculerTotalAutresPrestations = () => {
-    const totalTemps = calculerTotalTemps();
-    const totalImpression = calculerTotalImpression3DEtFonte();
-    return (totalTemps + totalImpression) * (1 + parametres.margeGlobale / 100);
   };
 
   useEffect(() => {
@@ -257,8 +257,23 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     console.log("ResumeDevis - options de livraison:", parametres?.prixLivraison);
   }, [devis, parametres]);
 
+  useEffect(() => {
+    console.log("Devis mis à jour:", devis);
+    console.log("Coût de fabrication non margé:", calculerCoutFabricationNonMarge());
+    console.log("Total général:", calculerTotalGeneral());
+    console.log("Marge totale:", calculerMarge());
+  }, [devis, calculerCoutFabricationNonMarge, calculerTotalGeneral, calculerMarge]);
+
+  useEffect(() => {
+    console.log("Devis mis à jour dans ResumeDevis:", devis);
+    const totalGeneral = calculerTotalGeneral();
+    const marge = calculerMarge();
+    console.log("Total général recalculé:", totalGeneral);
+    console.log("Marge recalculée:", marge);
+  }, [devis, calculerTotalGeneral, calculerMarge]);
+
   return (
-    <div className={`${bgClass} ${textClass} shadow-lg rounded-xl p-6 border ${borderClass}`}>
+    <div className={`p-6 rounded-xl shadow-lg ${bgClass} ${textClass}`}>
       <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
         Résumé du Devis
       </h2>
@@ -403,17 +418,18 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
 
       <Section title="Livraison">
         <div className="col-span-2">
-          {console.log("Options de livraison:", parametres?.prixLivraison)}
-          {console.log("Type de livraison actuel:", devis.typeLivraison)}
           <CustomSelect
-            options={(parametres?.prixLivraison ? Object.entries(parametres.prixLivraison) : []).map(([type, prix]) => ({
-              value: type,
-              label: `${type} - ${prix}€`
-            }))}
+            options={[
+              { value: '', label: 'Sélectionner la méthode de livraison' },
+              ...(parametres?.prixLivraison ? Object.entries(parametres.prixLivraison) : []).map(([type, prix]) => ({
+                value: type,
+                label: `${type} - ${prix}€`
+              }))
+            ]}
             value={devis.typeLivraison || ''}
             onChange={(value) => {
               handleInputChange('typeLivraison', value);
-              handleInputChange('prixLivraison', parametres?.prixLivraison?.[value] || 0);
+              handleInputChange('prixLivraison', value ? parametres?.prixLivraison?.[value] || 0 : 0);
             }}
             className={inputClass}
             darkMode={darkMode}
@@ -470,15 +486,31 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
       </Section>
 
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">
-        <h3 className="text-xl font-semibold text-center mb-2">Total Général</h3>
-        <p className="text-3xl text-center font-bold text-teal-600 dark:text-teal-300">
-          {formatPrix(calculerTotalGeneral())}
-        </p>
+        <h3 className="text-xl font-semibold text-center mb-2">Récapitulatif final</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-lg font-semibold">Total Général</p>
+            <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
+              {formatPrix(calculerTotalGeneral())}
+            </p>
+          </div>
+          <div>
+            <p className="text-lg font-semibold">Marge Totale</p>
+            <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
+              {formatPrix(calculerMarge())}
+            </p>
+          </div>
+        </div>
         {devis.remise.valeur > 0 && (
           <p className="text-center text-sm mt-2">
             (Remise appliquée : {devis.remise.type === 'pourcentage' ? `${devis.remise.valeur}%` : formatPrix(devis.remise.valeur)})
           </p>
         )}
+      </div>
+
+      <div className="mt-4">
+        <InfoItem label="Coût de fabrication non margé" value={formatPrix(calculerCoutFabricationNonMarge())} />
+        <InfoItem label="Prix total du métal (non facturé)" value={formatPrix(devis.totalMetal)} />
       </div>
 
       <div className="mt-8">
