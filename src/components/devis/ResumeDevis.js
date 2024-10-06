@@ -28,8 +28,9 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   }, [devis.totalGravureEtFinition]);
 
   const calculerTotalComposants = useCallback(() => {
-    return (devis.composantsFrequents?.reduce((acc, c) => acc + parseFloat(c.prix || 0), 0) || 0) +
-           (devis.composantsLibres?.reduce((acc, c) => acc + parseFloat(c.prix || 0), 0) || 0);
+    const totalFrequents = devis.composantsFrequents?.reduce((acc, c) => acc + parseFloat(c.prixTotal || c.prix || 0), 0) || 0;
+    const totalLibres = devis.composantsLibres?.reduce((acc, c) => acc + parseFloat(c.prixTotal || c.prix || 0), 0) || 0;
+    return totalFrequents + totalLibres;
   }, [devis.composantsFrequents, devis.composantsLibres]);
 
   const calculerFraisFontePalladium = useCallback(() => {
@@ -44,6 +45,24 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
            parseFloat(devis.tarifImpressionCire || 0) +
            parseFloat(devis.tarifImpressionResine || 0);
   }, [devis.tarifFonte, devis.tarifImpressionCire, devis.tarifImpressionResine]);
+
+  const calculerTotalDiamantsAvecMarge = useCallback(() => {
+    const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0);
+    return totalDiamants * (1 + (parametres.margeDiamantsRondsFournis || 0) / 100);
+  }, [devis.diamants, parametres.margeDiamantsRondsFournis]);
+
+  const calculerTotalAutresPierresAvecMarge = useCallback(() => {
+    const totalAutresPierres = devis.autresPierres.reduce((acc, p) => acc + (parseFloat(p.prixTotal) || 0), 0);
+    return totalAutresPierres * (1 + parametres.margeAutresPierresFournis / 100);
+  }, [devis.autresPierres, parametres.margeAutresPierresFournis]);
+
+  const calculerTotalSertissageAvecMarge = useCallback(() => {
+    return calculerTotalSertissage() * (1 + parametres.margeSertissage / 100);
+  }, [calculerTotalSertissage, parametres.margeSertissage]);
+
+  const calculerTotalComposantsAvecMarge = useCallback(() => {
+    return calculerTotalComposants() * (1 + parametres.margeComposants / 100);
+  }, [calculerTotalComposants, parametres.margeComposants]);
 
   const calculerTotalAutresPrestations = useCallback(() => {
     const totalTemps = calculerTotalTemps();
@@ -60,10 +79,10 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   }, [calculerTotalGravureEtFinition, parametres.margePoinconEtGravure]);
 
   const calculerTotalGeneral = useCallback(() => {
-    const totalDiamantsAvecMarge = parseFloat(devis.totalDiamants || 0);
-    const totalAutresPierresAvecMarge = parseFloat(devis.totalAutresPierres || 0);
-    const totalSertissageAvecMarge = calculerTotalSertissage() * (1 + parametres.margeSertissage / 100);
-    const totalComposantsAvecMarge = calculerTotalComposants() * (1 + parametres.margeComposants / 100);
+    const totalDiamantsAvecMarge = calculerTotalDiamantsAvecMarge();
+    const totalAutresPierresAvecMarge = calculerTotalAutresPierresAvecMarge();
+    const totalSertissageAvecMarge = calculerTotalSertissageAvecMarge();
+    const totalComposantsAvecMarge = calculerTotalComposantsAvecMarge();
     const totalGravureEtFinitionAvecMarge = calculerTotalGravureEtFinitionAvecMarge();
     const totalAutresPrestations = calculerTotalAutresPrestations();
     const fraisFontePalladium = calculerFraisFontePalladium();
@@ -103,7 +122,17 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     console.log('Total général final:', totalGeneral);
 
     return totalGeneral;
-  }, [devis, parametres, calculerTotalSertissage, calculerTotalComposants, calculerTotalAutresPrestations, calculerFraisFontePalladium, calculerTotalGravureEtFinitionAvecMarge]);
+  }, [
+    calculerTotalDiamantsAvecMarge,
+    calculerTotalAutresPierresAvecMarge,
+    calculerTotalSertissageAvecMarge,
+    calculerTotalComposantsAvecMarge,
+    calculerTotalGravureEtFinitionAvecMarge,
+    calculerTotalAutresPrestations,
+    calculerFraisFontePalladium,
+    devis.prixLivraison,
+    devis.remise
+  ]);
 
   const calculerCoutFabricationNonMarge = useCallback(() => {
     return (
@@ -147,16 +176,16 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   };
 
   const Section = ({ title, children }) => (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2 pb-1 border-b border-gray-300 dark:border-gray-600">{title}</h3>
-      <div className="grid grid-cols-2 gap-4">{children}</div>
+    <div className="mb-6 bg-white dark:bg-gray-700 rounded-lg shadow-md p-4">
+      <h3 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-600">{title}</h3>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 
   const InfoItem = ({ label, value }) => (
-    <div>
-      <span className="font-medium text-gray-600 dark:text-gray-400">{label}:</span>
-      <span className="ml-2">{value || 'Non spécifié'}</span>
+    <div className="flex justify-between items-center">
+      <span className="font-medium text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="text-gray-800 dark:text-gray-200">{value || 'Non spécifié'}</span>
     </div>
   );
 
@@ -165,11 +194,6 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     return Object.values(temps).reduce((total, t) => {
       return total + (t.heures || 0) * 60 + (t.minutes || 0);
     }, 0);
-  };
-
-  const handleRemiseInputChange = (e) => {
-    const { name, value } = e.target;
-    handleRemiseChange(name === 'type' ? value : devis.remise.type, name === 'valeur' ? value : devis.remise.valeur);
   };
 
   // Utilisez useMemo pour mémoriser le résultat
@@ -183,60 +207,13 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     <div className="col-span-2">
       <h4 className="font-semibold mb-2">{titre}</h4>
       {composants.map((composant, index) => (
-        <div key={index} className="mb-1 text-sm">
+        <div key={index} className="text-sm flex justify-between">
           <span>{composant.description || composant.nom}</span>
-          <span className="mx-1">|</span>
-          <span>Prix : {formatPrix(composant.prix)}</span>
-          {composant.quantite && (
-            <>
-              <span className="mx-1">|</span>
-              <span>Quantité : {composant.quantite}</span>
-            </>
-          )}
-          {composant.prixTotal && (
-            <>
-              <span className="mx-1">|</span>
-              <span>Total : {formatPrix(composant.prixTotal)}</span>
-            </>
-          )}
+          <span>{formatPrix(composant.prixTotal || composant.prix)}</span>
         </div>
       ))}
     </div>
   );
-
-  const renderTempsProduction = () => {
-    return Object.entries(devis.tempsProduction).map(([type, temps]) => {
-      const heures = temps.heures || 0;
-      const minutes = temps.minutes || 0;
-      const tempsTotal = heures + minutes / 60;
-      const cout = tempsTotal * (tauxHoraires[type] || 0);
-      return (
-        <div key={type} className="flex justify-between">
-          <span className="capitalize">{type}:</span>
-          <span>{`${heures}h ${minutes}min - ${formatPrix(cout)}`}</span>
-        </div>
-      );
-    });
-  };
-
-  // Nouvelles fonctions de calcul
-  const calculerTotalDiamantsAvecMarge = () => {
-    const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotal) || 0), 0);
-    return totalDiamants * (1 + parametres.margeDiamantsRondsFournis / 100);
-  };
-
-  const calculerTotalAutresPierresAvecMarge = () => {
-    const totalAutresPierres = devis.autresPierres.reduce((acc, p) => acc + (parseFloat(p.prixTotal) || 0), 0);
-    return totalAutresPierres * (1 + parametres.margeAutresPierresFournis / 100);
-  };
-
-  const calculerTotalSertissageAvecMarge = () => {
-    return calculerTotalSertissage() * (1 + parametres.margeSertissage / 100);
-  };
-
-  const calculerTotalComposantsAvecMarge = () => {
-    return totalComposants * (1 + parametres.margeComposants / 100);
-  };
 
   useEffect(() => {
     // Définir la date de validité à 30 jours à partir de la date actuelle si elle n'est pas déjà définie
@@ -278,146 +255,108 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         Résumé du Devis
       </h2>
       
-      <Section title="Informations et détails">
-        <InfoItem label="Client" value={getClientName(devis.client)} />
-        <InfoItem label="Titre du devis" value={devis.titreDevis} />
-        <InfoItem label="Catégorie" value={devis.categorie} />
-        <InfoItem label="Sous-catégorie" value={devis.sousCategorie} />
-        <InfoItem label="Métal" value={devis.metal} />
-        <InfoItem label="Poids estimé" value={devis.poidsEstime ? `${devis.poidsEstime} g` : null} />
-        <InfoItem label="Taille" value={devis.taille} />
-        <InfoItem label="Description" value={devis.description} />
-        {devis.metal === "Or Gris Palladié" && (
-          <InfoItem 
-            label="Frais fonte Or Gris Palladié" 
-            value={formatPrix(calculerFraisFontePalladium())}
-          />
-        )}
-      </Section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Section title="Informations générales">
+          <InfoItem label="Client" value={getClientName(devis.client)} />
+          <InfoItem label="Titre du devis" value={devis.titreDevis} />
+          <InfoItem label="Catégorie" value={devis.categorie} />
+          <InfoItem label="Sous-catégorie" value={devis.sousCategorie} />
+        </Section>
 
-      <Section title="Temps de production">
-        <div className="col-span-2">
-          {renderTempsProduction()}
-          <div className="mt-2 font-semibold">
-            <span>Total temps de production:</span>
-            <span className="float-right">{formatTemps(calculerTempsTotal())}</span>
-          </div>
-          <div className="mt-1 font-semibold">
-            <span>Coût total temps de production:</span>
-            <span className="float-right">{formatPrix(calculerTotalTemps())}</span>
-          </div>
-        </div>
-      </Section>
+        <Section title="Détails du produit">
+          <InfoItem label="Métal" value={devis.metal} />
+          <InfoItem label="Poids estimé" value={devis.poidsEstime ? `${devis.poidsEstime} g` : null} />
+          <InfoItem label="Taille" value={devis.taille} />
+          <InfoItem label="Description" value={devis.description} />
+        </Section>
 
-      <Section title="Diamants et pierres">
-        <div className="col-span-2">
-          <h4 className="font-semibold mb-2">Diamants ronds</h4>
-          {devis.diamants.map((diamant, index) => (
-            <div key={index} className="mb-1 text-sm">
-              <span>{diamant.taille}mm</span>
-              <span className="mx-1">|</span>
-              <span>Qté: {diamant.qte}</span>
-              <span className="mx-1">|</span>
-              <span>Fourni par: {diamant.fourniPar}</span>
-              <span className="mx-1">|</span>
-              <span>Sertissage: {diamant.sertissage}</span>
+        <Section title="Temps de production">
+          <div className="space-y-2">
+            {Object.entries(devis.tempsProduction).map(([type, temps]) => (
+              <div key={type} className="flex justify-between">
+                <span className="capitalize">{type}:</span>
+                <span>{`${temps.heures}h ${temps.minutes}min`}</span>
+              </div>
+            ))}
+            <div className="font-semibold mt-2">
+              <span>Total temps:</span>
+              <span className="float-right">{formatTemps(calculerTempsTotal())}</span>
             </div>
-          ))}
-          <InfoItem label="Total prix diamants" value={formatPrix(devis.diamants.reduce((acc, d) => acc + (d.prixTotalDiamants || 0), 0))} />
-        </div>
-        <div className="col-span-2 mt-4">
-          <h4 className="font-semibold mb-2">Autres pierres</h4>
-          {devis.autresPierres.map((pierre, index) => (
-            <div key={index} className="mb-1 text-sm">
-              <span>{pierre.forme}</span>
-              <span className="mx-1">|</span>
-              <span>{pierre.type}</span>
-              <span className="mx-1">|</span>
-              <span>Qté: {pierre.qte}</span>
-              <span className="mx-1">|</span>
-              <span>Taille: {pierre.dimension}</span>
-              <span className="mx-1">|</span>
-              <span>Sertissage: {pierre.sertissage}</span>
+            <div className="font-semibold">
+              <span>Coût total:</span>
+              <span className="float-right">{formatPrix(calculerTotalTemps())}</span>
             </div>
-          ))}
-          <InfoItem label="Total prix autres pierres" value={formatPrix(devis.autresPierres.reduce((acc, p) => acc + (p.prixTotal || 0), 0))} />
-        </div>
-        <InfoItem label="Total prix sertissage" value={formatPrix(calculerTotalSertissage())} />
-      </Section>
+          </div>
+        </Section>
 
-      <Section title="Impression 3D et Fonte">
-        <InfoItem 
-          label="Tarif fonte" 
-          value={formatPrix(devis.tarifFonte)}
-        />
-        <InfoItem 
-          label="Tarif impression cire" 
-          value={formatPrix(devis.tarifImpressionCire)}
-        />
-        <InfoItem 
-          label="Tarif impression résine" 
-          value={formatPrix(devis.tarifImpressionResine)}
-        />
-        <InfoItem 
-          label="Total Impression 3D et Fonte" 
-          value={formatPrix(calculerTotalImpression3DEtFonte())}
-        />
-      </Section>
+        <Section title="Diamants et pierres">
+          <div className="space-y-3">
+            <h4 className="font-semibold">Diamants ronds</h4>
+            {devis.diamants.map((diamant, index) => (
+              <div key={index} className="text-sm">
+                {`${diamant.taille}mm | Qté: ${diamant.qte} | ${diamant.fourniPar} | ${diamant.sertissage}`}
+              </div>
+            ))}
+            <InfoItem label="Total diamants" value={formatPrix(calculerTotalDiamantsAvecMarge())} />
+            
+            <h4 className="font-semibold mt-4">Autres pierres</h4>
+            {devis.autresPierres.map((pierre, index) => (
+              <div key={index} className="text-sm">
+                {`${pierre.forme} ${pierre.type} | Qté: ${pierre.qte} | Taille: ${pierre.dimension} | ${pierre.sertissage}`}
+              </div>
+            ))}
+            <InfoItem label="Total autres pierres" value={formatPrix(calculerTotalAutresPierresAvecMarge())} />
+            <InfoItem label="Total sertissage" value={formatPrix(calculerTotalSertissageAvecMarge())} />
+          </div>
+        </Section>
 
-      <Section title="Composants">
-        {renderComposants(devis.composantsFrequents, "Composants fréquents")}
-        {renderComposants(devis.composantsLibres, "Composants libres")}
-        <InfoItem 
-          label="Total composants" 
-          value={formatPrix(totalComposants)}
-        />
-      </Section>
+        <Section title="Impression 3D et Fonte">
+          <InfoItem label="Tarif fonte" value={formatPrix(devis.tarifFonte)} />
+          <InfoItem label="Tarif impression cire" value={formatPrix(devis.tarifImpressionCire)} />
+          <InfoItem label="Tarif impression résine" value={formatPrix(devis.tarifImpressionResine)} />
+          <InfoItem label="Total" value={formatPrix(calculerTotalImpression3DEtFonte())} />
+        </Section>
 
-      <Section title="Gravure et Finition">
-        {devis.gravure && devis.styleGravure && (
-          <InfoItem 
-            label="Gravure" 
-            value={`${devis.gravure} - ${devis.styleGravure} (${formatPrix(parametres.prixGravure[devis.styleGravure])})`} 
-          />
-        )}
-        {devis.options.rhodiage && (
-          <InfoItem label="Rhodiage" value={formatPrix(parametres.prixRhodiage)} />
-        )}
-        {devis.options.gravureLogoMarque && (
-          <InfoItem 
-            label="Gravure logo marque" 
-            value={formatPrix(parametres.prixPoincons.marque.gravureLogoMarque)} 
-          />
-        )}
-        {devis.options.gravureNumeroSerie && (
-          <InfoItem 
-            label="Gravure numéro de série" 
-            value={formatPrix(parametres.prixPoincons.marque.gravureNumeroSerie)} 
-          />
-        )}
-        {devis.options.poinconMaitre && (
-          <InfoItem 
-            label="Poinçon maître" 
-            value={`${devis.options.poinconMaitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre])}`} 
-          />
-        )}
-        {devis.options.poinconTitre && (
-          <InfoItem 
-            label="Poinçon titre" 
-            value={`${devis.options.poinconTitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre])}`} 
-          />
-        )}
-        {devis.options.marque && (
-          <InfoItem label="Marque" value={devis.options.marque} />
-        )}
-        <InfoItem 
-          label="Total Gravure et Finition" 
-          value={formatPrix(calculerTotalGravureEtFinition())}
-        />
-      </Section>
+        <Section title="Composants">
+          <div className="space-y-4">
+            {renderComposants(devis.composantsFrequents, "Composants fréquents")}
+            {renderComposants(devis.composantsLibres, "Composants libres")}
+            <InfoItem label="Total composants" value={formatPrix(calculerTotalComposantsAvecMarge())} />
+          </div>
+        </Section>
+
+        <Section title="Gravure et Finition">
+          {devis.gravure && devis.styleGravure && (
+            <InfoItem 
+              label="Gravure" 
+              value={`${devis.gravure} - ${devis.styleGravure} (${formatPrix(parametres.prixGravure[devis.styleGravure])})`} 
+            />
+          )}
+          {devis.options.rhodiage && <InfoItem label="Rhodiage" value={formatPrix(parametres.prixRhodiage)} />}
+          {devis.options.gravureLogoMarque && (
+            <InfoItem label="Gravure logo marque" value={formatPrix(parametres.prixPoincons.marque.gravureLogoMarque)} />
+          )}
+          {devis.options.gravureNumeroSerie && (
+            <InfoItem label="Gravure numéro de série" value={formatPrix(parametres.prixPoincons.marque.gravureNumeroSerie)} />
+          )}
+          {devis.options.poinconMaitre && (
+            <InfoItem 
+              label="Poinçon maître" 
+              value={`${devis.options.poinconMaitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre])}`} 
+            />
+          )}
+          {devis.options.poinconTitre && (
+            <InfoItem 
+              label="Poinçon titre" 
+              value={`${devis.options.poinconTitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre])}`} 
+            />
+          )}
+          <InfoItem label="Total Gravure et Finition" value={formatPrix(calculerTotalGravureEtFinitionAvecMarge())} />
+        </Section>
+      </div>
 
       <Section title="Livraison">
-        <div className="col-span-2">
+        <div className="mb-4">
           <CustomSelect
             options={[
               { value: '', label: 'Sélectionner la méthode de livraison' },
@@ -441,11 +380,11 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
       </Section>
 
       <Section title="Remise">
-        <div className="col-span-2 flex items-center space-x-4">
+        <div className="flex items-center space-x-4">
           <select
             name="type"
             value={devis.remise.type}
-            onChange={handleRemiseInputChange}
+            onChange={(e) => handleRemiseChange(e.target.value, devis.remise.valeur)}
             className={inputClass}
           >
             <option value="pourcentage">Pourcentage</option>
@@ -455,7 +394,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
             type="number"
             name="valeur"
             value={devis.remise.valeur}
-            onChange={handleRemiseInputChange}
+            onChange={(e) => handleRemiseChange(devis.remise.type, e.target.value)}
             className={`${inputClass} w-24`}
             step="0.01"
             min="0"
@@ -464,30 +403,9 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         </div>
       </Section>
 
-      <Section title="Récapitulatif des coûts">
-        <InfoItem label="Prix total Diamants Rond avec marge" value={formatPrix(calculerTotalDiamantsAvecMarge())} />
-        <InfoItem label="Prix total Autres Pierres avec marge" value={formatPrix(calculerTotalAutresPierresAvecMarge())} />
-        <InfoItem label="Prix total Sertissage avec marge" value={formatPrix(calculerTotalSertissageAvecMarge())} />
-        <InfoItem label="Prix total Composants avec marge" value={formatPrix(calculerTotalComposantsAvecMarge())} />
-        <InfoItem label="Prix total Gravure et Finition avec marge" value={formatPrix(calculerTotalGravureEtFinitionAvecMarge())} />
-        <InfoItem label="Prix total Autres prestations" value={formatPrix(calculerTotalAutresPrestations())} />
-        {devis.metal === "Or Gris Palladié" && (
-          <InfoItem label="Frais fonte Or Gris Palladié" value={formatPrix(calculerFraisFontePalladium())} />
-        )}
-        <InfoItem label="Prix livraison" value={formatPrix(devis.prixLivraison)} />
-      </Section>
-
-      <Section title="Informations supplémentaires">
-        <InfoItem label="Statut" value={devis.status} />
-        <InfoItem label="Version" value={devis.version} />
-        <InfoItem label="Devise" value={devis.currency} />
-        <InfoItem label="Valide jusqu'au" value={devis.validUntil ? new Date(devis.validUntil).toLocaleDateString() : 'Non spécifié'} />
-        <InfoItem label="Conditions de paiement" value={devis.paymentTerms || 'Non spécifiées'} />
-      </Section>
-
-      <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">
-        <h3 className="text-xl font-semibold text-center mb-2">Récapitulatif final</h3>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-6 rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold text-center mb-4">Récapitulatif final</h3>
+        <div className="grid grid-cols-2 gap-6">
           <div>
             <p className="text-lg font-semibold">Total Général</p>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
@@ -502,13 +420,13 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           </div>
         </div>
         {devis.remise.valeur > 0 && (
-          <p className="text-center text-sm mt-2">
+          <p className="text-center text-sm mt-4">
             (Remise appliquée : {devis.remise.type === 'pourcentage' ? `${devis.remise.valeur}%` : formatPrix(devis.remise.valeur)})
           </p>
         )}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-6 space-y-2">
         <InfoItem label="Coût de fabrication non margé" value={formatPrix(calculerCoutFabricationNonMarge())} />
         <InfoItem label="Prix total du métal (non facturé)" value={formatPrix(devis.totalMetal)} />
       </div>
