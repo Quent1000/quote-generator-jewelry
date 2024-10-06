@@ -441,10 +441,6 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         </div>
       </div>
 
-      <div className="mt-6 space-y-2">
-        <InfoItem label="Coût de fabrication non margé" value={formatPrix(calculerCoutFabricationNonMarge())} />
-        <InfoItem label="Prix total du métal (non facturé)" value={formatPrix(devis.totalMetal)} />
-      </div>
 
       <div className="mt-8">
         <button
