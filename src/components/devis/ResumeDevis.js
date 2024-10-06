@@ -404,26 +404,41 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
       </Section>
 
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-6 rounded-lg shadow-md">
-        <h3 className="text-xl font-semibold text-center mb-4">Récapitulatif final</h3>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <p className="text-lg font-semibold">Total Général</p>
+        <h3 className="text-xl font-semibold text-center mb-6">Récapitulatif final</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <p className="text-lg font-semibold mb-2">Total Général</p>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
               {formatPrix(calculerTotalGeneral())}
             </p>
           </div>
-          <div>
-            <p className="text-lg font-semibold">Marge Totale</p>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <p className="text-lg font-semibold mb-2">Marge Totale</p>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
               {formatPrix(calculerMarge())}
             </p>
           </div>
         </div>
         {devis.remise.valeur > 0 && (
-          <p className="text-center text-sm mt-4">
-            (Remise appliquée : {devis.remise.type === 'pourcentage' ? `${devis.remise.valeur}%` : formatPrix(devis.remise.valeur)})
-          </p>
+          <div className="mt-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <p className="text-lg font-semibold mb-2">Remise appliquée</p>
+            <p className="text-xl font-bold text-red-500">
+              {devis.remise.type === 'pourcentage'
+                ? `${devis.remise.valeur}%`
+                : formatPrix(devis.remise.valeur)}
+            </p>
+          </div>
         )}
+        <div className="mt-6 space-y-2">
+          <InfoItem
+            label="Coût de fabrication non margé"
+            value={formatPrix(calculerCoutFabricationNonMarge())}
+          />
+          <InfoItem
+            label="Prix total du métal (non facturé)"
+            value={formatPrix(devis.totalMetal)}
+          />
+        </div>
       </div>
 
       <div className="mt-6 space-y-2">
