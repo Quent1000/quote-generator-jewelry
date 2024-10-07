@@ -15,11 +15,16 @@ const PageDevis = () => {
         const devisRef = collection(db, 'devis');
         const q = query(devisRef, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
-        const devisData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        console.log("Devis récupérés:", devisData); // Ajoutez ce log
+        const devisData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          // Assurez-vous que totalGeneral est bien récupéré
+          return {
+            id: doc.id,
+            ...data,
+            totalGeneral: data.totalGeneral || data.montantTotal || 0,
+          };
+        });
+        console.log("Devis récupérés:", devisData);
         setDevis(devisData);
         setIsLoading(false);
       } catch (error) {

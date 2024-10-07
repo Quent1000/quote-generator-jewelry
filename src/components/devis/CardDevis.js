@@ -2,6 +2,9 @@ import React from 'react';
 import { DocumentTextIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor }) => {
+  // Assurez-vous d'utiliser le bon champ pour le montant total
+  const montantTotal = devis.totalGeneral || devis.montantTotal || 0;
+
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105`}>
       {devis.images && devis.images.length > 0 && (
@@ -25,7 +28,7 @@ const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor 
         <p className="text-sm mb-2"><span className="font-medium">Sous-catégorie:</span> {devis.sousCategorie || 'Non défini'}</p>
         <p className="text-sm mb-2"><span className="font-medium">Métal:</span> {devis.metal || 'Non défini'}</p>
         <p className="text-sm mb-4">
-          <span className="font-medium">Montant:</span> {devis.montantTotal ? formatMontant(devis.montantTotal) : "En cours de calcul"}
+          <span className="font-medium">Montant:</span> {formatMontant(montantTotal)}
         </p>
         {devis.tags && devis.tags.length > 0 && (
           <div className="mb-4">
