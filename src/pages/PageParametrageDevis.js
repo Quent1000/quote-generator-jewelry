@@ -676,11 +676,11 @@ const PageParametrageDevis = () => {
                   <h3 className="text-lg font-semibold mb-2">Gravure</h3>
                   <div className="space-y-2">
                     <div>
-                      <label className="block mb-1">Gravure Manuscrite</label>
+                      <label className="block mb-1">Gravure Anglaise</label>
                       <input
                         type="number"
-                        value={parametres.prixGravure.Manuscrite}
-                        onChange={(e) => handleNestedInputChange('prixGravure', 'Manuscrite', e.target.value)}
+                        value={parametres.prixGravure.Anglaise}
+                        onChange={(e) => handleNestedInputChange('prixGravure', 'Anglaise', e.target.value)}
                         className={inputClass}
                         step="0.01"
                       />

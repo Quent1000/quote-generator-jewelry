@@ -24,8 +24,19 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   }, [devis.diamants, devis.autresPierres]);
 
   const calculerTotalGravureEtFinition = useCallback(() => {
-    return parseFloat(devis.totalGravureEtFinition || 0);
-  }, [devis.totalGravureEtFinition]);
+    let total = 0;
+    if (devis.gravure && devis.styleGravure) {
+      total += devis.styleGravure === 'custom' 
+        ? parseFloat(devis.prixGravureCustom || 0) 
+        : (parametres.prixGravure[devis.styleGravure] || 0);
+    }
+    if (devis.options.rhodiage) total += parametres.prixRhodiage || 0;
+    if (devis.options.gravureLogoMarque) total += parametres.prixPoincons.marque.gravureLogoMarque || 0;
+    if (devis.options.gravureNumeroSerie) total += parametres.prixPoincons.marque.gravureNumeroSerie || 0;
+    if (devis.options.poinconMaitre) total += parametres.prixPoincons.poinconMaitre[devis.options.poinconMaitre] || 0;
+    if (devis.options.poinconTitre) total += parametres.prixPoincons.poinconTitre[devis.options.poinconTitre] || 0;
+    return total;
+  }, [devis, parametres]);
 
   const calculerTotalComposants = useCallback(() => {
     const totalFrequents = devis.composantsFrequents?.reduce((acc, c) => acc + parseFloat(c.prixTotal || c.prix || 0), 0) || 0;
@@ -41,10 +52,12 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   }, [devis.metal, devis.poidsEstime, parametres.fraisFontePalladium]);
 
   const calculerTotalImpression3DEtFonte = useCallback(() => {
-    return parseFloat(devis.tarifFonte || 0) +
-           parseFloat(devis.tarifImpressionCire || 0) +
-           parseFloat(devis.tarifImpressionResine || 0);
-  }, [devis.tarifFonte, devis.tarifImpressionCire, devis.tarifImpressionResine]);
+    const tarifFonte = devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
+    const tarifImpressionCire = devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
+    const tarifImpressionResine = devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+    
+    return tarifFonte + tarifImpressionCire + tarifImpressionResine;
+  }, [devis.tarifFonte, devis.tarifFonteCustom, devis.tarifImpressionCire, devis.tarifImpressionCireCustom, devis.tarifImpressionResine, devis.tarifImpressionResineCustom]);
 
   const calculerTotalDiamantsAvecMarge = useCallback(() => {
     const totalDiamants = devis.diamants.reduce((acc, d) => acc + (parseFloat(d.prixTotalDiamants) || 0), 0);
@@ -311,10 +324,28 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         </Section>
 
         <Section title="Impression 3D et Fonte">
-          <InfoItem label="Tarif fonte" value={formatPrix(devis.tarifFonte)} />
-          <InfoItem label="Tarif impression cire" value={formatPrix(devis.tarifImpressionCire)} />
-          <InfoItem label="Tarif impression résine" value={formatPrix(devis.tarifImpressionResine)} />
-          <InfoItem label="Total" value={formatPrix(calculerTotalImpression3DEtFonte())} />
+          <InfoItem 
+            label="Tarif fonte" 
+            value={formatPrix(devis.tarifFonte === 'custom' ? devis.tarifFonteCustom : devis.tarifFonte)} 
+          />
+          <InfoItem 
+            label="Tarif impression cire" 
+            value={formatPrix(devis.tarifImpressionCire === 'custom' ? devis.tarifImpressionCireCustom : devis.tarifImpressionCire)} 
+          />
+          <InfoItem 
+            label="Tarif impression résine" 
+            value={formatPrix(devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine)} 
+          />
+          {devis.metal === "Or Gris Palladié" && (
+            <InfoItem 
+              label="Frais fonte palladium" 
+              value={formatPrix(calculerFraisFontePalladium())} 
+            />
+          )}
+          <InfoItem 
+            label="Total" 
+            value={formatPrix(calculerTotalImpression3DEtFonte() + calculerFraisFontePalladium())} 
+          />
         </Section>
 
         <Section title="Composants">
@@ -329,7 +360,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           {devis.gravure && devis.styleGravure && (
             <InfoItem 
               label="Gravure" 
-              value={`${devis.gravure} - ${devis.styleGravure} (${formatPrix(parametres.prixGravure[devis.styleGravure])})`} 
+              value={`${devis.gravure} - ${devis.styleGravure === 'custom' ? 'Prix personnalisé' : devis.styleGravure} (${formatPrix(devis.styleGravure === 'custom' ? devis.prixGravureCustom : parametres.prixGravure[devis.styleGravure])})`} 
             />
           )}
           {devis.options.rhodiage && <InfoItem label="Rhodiage" value={formatPrix(parametres.prixRhodiage)} />}
@@ -438,6 +469,14 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
             label="Prix total du métal (non facturé)"
             value={formatPrix(devis.totalMetal)}
           />
+          {/* La ligne suivante a été supprimée pour éviter le doublon
+          {devis.metal === "Or Gris Palladié" && (
+            <InfoItem
+              label="Frais fonte palladium"
+              value={formatPrix(calculerFraisFontePalladium())}
+            />
+          )}
+          */}
         </div>
       </div>
 

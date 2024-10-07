@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import CustomSelect from './CustomSelect';
 
 const OptionsProduit = ({ devis, handleInputChange, handleOptionsChange, darkMode, parametres, defaultRhodiage }) => {
+  const [customGravurePrice, setCustomGravurePrice] = useState('');
+
   const inputClass = `w-full p-2 border rounded ${
     darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
   } focus:border-teal-500 focus:ring-2 focus:ring-teal-200`;
@@ -21,6 +23,16 @@ const OptionsProduit = ({ devis, handleInputChange, handleOptionsChange, darkMod
     </div>
   );
 
+  const handleGravureStyleChange = (value) => {
+    if (value === 'custom') {
+      handleInputChange('styleGravure', 'custom');
+      handleInputChange('prixGravureCustom', customGravurePrice);
+    } else {
+      handleInputChange('styleGravure', value);
+      handleInputChange('prixGravureCustom', null);
+    }
+  };
+
   const calculerTotal = () => {
     let total = 0;
     
@@ -32,7 +44,11 @@ const OptionsProduit = ({ devis, handleInputChange, handleOptionsChange, darkMod
     
     // Gravure
     if (devis.gravure && devis.styleGravure) {
-      total += stylesGravure[devis.styleGravure] || 0;
+      if (devis.styleGravure === 'custom') {
+        total += parseFloat(devis.prixGravureCustom) || 0;
+      } else {
+        total += stylesGravure[devis.styleGravure] || 0;
+      }
     }
     
     // Options supplémentaires
@@ -109,14 +125,30 @@ const OptionsProduit = ({ devis, handleInputChange, handleOptionsChange, darkMod
                     { value: '', label: 'Sélectionner un style' },
                     ...Object.entries(stylesGravure).map(([style, prix]) => ({
                       value: style,
-                      label: `${style} (${prix}€)`
-                    }))
+                      label: `${style === 'Anglaise' ? 'Gravure Anglaise' : style} (${prix}€)`
+                    })),
+                    { value: 'custom', label: 'Prix personnalisé' }
                   ]}
                   value={devis.styleGravure}
-                  onChange={(value) => handleInputChange('styleGravure', value)}
+                  onChange={handleGravureStyleChange}
                   className={inputClass}
                   darkMode={darkMode}
                 />
+              )}
+              {devis.styleGravure === 'custom' && (
+                <div className="mt-2">
+                  <input
+                    type="number"
+                    value={customGravurePrice}
+                    onChange={(e) => {
+                      setCustomGravurePrice(e.target.value);
+                      handleInputChange('prixGravureCustom', e.target.value);
+                    }}
+                    className={inputClass}
+                    placeholder="Prix personnalisé"
+                    step="0.01"
+                  />
+                </div>
               )}
             </div>
           ))}

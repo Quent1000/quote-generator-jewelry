@@ -24,8 +24,10 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
 
   const categorieOptions = Object.keys(categories).map(cat => ({ value: cat, label: cat }));
   const sousCategorieOptions = devis.categorie && categories[devis.categorie]
-    ? categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
-    : [];
+    ? [{ value: '', label: 'Sélectionner' }].concat(
+        categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
+      )
+    : [{ value: '', label: 'Sélectionner' }];
 
   const ordrePersonnalise = ['Or Jaune 3N', 'Or Gris', 'Or Rouge 5N', 'Or Gris Palladié'];
 
@@ -137,11 +139,12 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
         {renderOption("Sous-catégorie", (
           <CustomSelect
             options={sousCategorieOptions}
-            value={devis.sousCategorie}
+            value={devis.sousCategorie || ''}
             onChange={(value) => handleInputChange('sousCategorie', value)}
             className={inputClass}
             darkMode={darkMode}
             disabled={!devis.categorie}
+            placeholder="Sélectionner"
           />
         ))}
         {renderOption("Métal", (
