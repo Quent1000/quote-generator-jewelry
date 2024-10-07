@@ -1,27 +1,19 @@
 export const calculateDevis = (devis, parametres) => {
-  // Implémentez ici toutes les fonctions de calcul de ResumeDevis.js
-  // Par exemple :
   const calculerTotalMetal = (devis, parametres) => {
     if (devis.metal && devis.poidsEstime) {
       const prixMetal = parametres.prixMetaux[devis.metal] || 0;
-      // Le prix du métal est généralement en euros par gramme
-      // Assurez-vous que poidsEstime est en grammes
-      return (parseFloat(devis.poidsEstime) * prixMetal) / 1000; // Divisé par 1000 si le prix est par kilo
+      return (parseFloat(devis.poidsEstime) * prixMetal) / 1000;
     }
     return 0;
   };
 
-  const calculerTotalDiamants = () => {
-    // ... logique de calcul
-    return devis.diamants.reduce((total, diamant) => total + parseFloat(diamant.prixTotal || 0), 0);
+  const calculerTotalDiamants = (devis) => {
+    return devis.diamants.reduce((total, diamant) => total + parseFloat(diamant.prixTotalDiamants || 0), 0);
   };
 
-  // ... autres fonctions de calcul
-
-  // Calculez toutes les valeurs
-  const totalMetal = calculerTotalMetal(devis, parametres);
-  const totalDiamants = calculerTotalDiamants();
-  // ... autres calculs
+  const calculerTotalAutresPierres = (devis) => {
+    return devis.autresPierres.reduce((total, pierre) => total + parseFloat(pierre.prixTotal || 0), 0);
+  };
 
   const calculerTotalGravureEtFinition = (devis, parametres) => {
     let total = 0;
@@ -30,20 +22,15 @@ export const calculateDevis = (devis, parametres) => {
     const prixMarque = prixPoincons.marque || {};
     const stylesGravure = parametres?.prixGravure || {};
 
-    // Vérifiez si prixPoincons.poinconMaitre existe avant d'y accéder
     if (prixPoincons.poinconMaitre && options.poinconMaitre) {
       total += prixPoincons.poinconMaitre[options.poinconMaitre] || 0;
     }
-
-    // Vérifiez si prixPoincons.poinconTitre existe avant d'y accéder
     if (prixPoincons.poinconTitre && options.poinconTitre) {
       total += prixPoincons.poinconTitre[options.poinconTitre] || 0;
     }
-    
     if (devis.gravure && devis.styleGravure && stylesGravure[devis.styleGravure]) {
       total += stylesGravure[devis.styleGravure];
     }
-    
     if (options.gravureLogoMarque && prixMarque.gravureLogoMarque) {
       total += prixMarque.gravureLogoMarque;
     }
@@ -53,18 +40,61 @@ export const calculateDevis = (devis, parametres) => {
     if (options.rhodiage && parametres.prixRhodiage) {
       total += parametres.prixRhodiage;
     }
-    
     return total;
   };
 
-  const totalGravureEtFinition = calculerTotalGravureEtFinition(devis, parametres);
+  const calculerTotalComposants = (devis) => {
+    const totalFrequents = devis.composantsFrequents?.reduce((acc, c) => acc + parseFloat(c.prixTotal || c.prix || 0), 0) || 0;
+    const totalLibres = devis.composantsLibres?.reduce((acc, c) => acc + parseFloat(c.prixTotal || c.prix || 0), 0) || 0;
+    return totalFrequents + totalLibres;
+  };
 
-  // Retournez un nouvel objet avec les valeurs calculées
+  const calculerTotalTemps = (devis, tauxHoraires) => {
+    if (!tauxHoraires) {
+      console.warn("tauxHoraires est undefined dans calculerTotalTemps");
+      return 0;
+    }
+    return Object.entries(devis.tempsProduction).reduce((total, [type, temps]) => {
+      const heures = (temps.heures || 0) + (temps.minutes || 0) / 60;
+      return total + heures * (tauxHoraires[type] || 0);
+    }, 0);
+  };
+
+  const calculerTotalImpression3DEtFonte = (devis) => {
+    const tarifFonte = devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
+    const tarifImpressionCire = devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
+    const tarifImpressionResine = devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+    return tarifFonte + tarifImpressionCire + tarifImpressionResine;
+  };
+
+  const calculerFraisFontePalladium = (devis, parametres) => {
+    if (devis.metal === "Or Gris Palladié" && devis.poidsEstime && parametres.fraisFontePalladium) {
+      return parseFloat(devis.poidsEstime) * parseFloat(parametres.fraisFontePalladium);
+    }
+    return 0;
+  };
+
+  const totalMetal = calculerTotalMetal(devis, parametres);
+  const totalDiamants = calculerTotalDiamants(devis);
+  const totalAutresPierres = calculerTotalAutresPierres(devis);
+  const totalGravureEtFinition = calculerTotalGravureEtFinition(devis, parametres);
+  const totalComposants = calculerTotalComposants(devis);
+  const totalTemps = calculerTotalTemps(devis, parametres.tauxHoraires);
+  const totalImpression3DEtFonte = calculerTotalImpression3DEtFonte(devis);
+  const fraisFontePalladium = calculerFraisFontePalladium(devis, parametres);
+
+  const totalGeneral = totalMetal + totalDiamants + totalAutresPierres + totalGravureEtFinition + totalComposants + totalTemps + totalImpression3DEtFonte + fraisFontePalladium;
+
   return {
     ...devis,
     totalMetal,
     totalDiamants,
+    totalAutresPierres,
     totalGravureEtFinition,
-    // Ne calculez pas totalGravureEtFinitionAvecMarge ici
+    totalComposants,
+    totalTemps,
+    totalImpression3DEtFonte,
+    fraisFontePalladium,
+    totalGeneral
   };
 };

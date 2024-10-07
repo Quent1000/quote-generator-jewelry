@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { db, storage, getNextDevisNumber, auth } from '../firebase';  // Ajoutez getNextDevisNumber ici
+import { db, storage, getNextDevisNumber, getLastDevisNumber, auth } from '../firebase';  // Ajoutez getNextDevisNumber ici
 import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
@@ -105,6 +105,14 @@ const PageCreerDevisV2 = () => {
     prixSertissage: {},
     prixDiamantsRonds: {},
     coefficientDiamantsRonds: 1.15,
+    tauxHoraires: {
+      administratif: 0,
+      cao: 0,
+      bijouterie: 0,
+      joaillerie: 0,
+      dessertissage: 0,
+      design: 0,
+    },
   });
   const [stylesGravure, setStylesGravure] = useState([]);
   const [diametresEtCarats, setDiametresEtCarats] = useState({
@@ -491,20 +499,22 @@ const PageCreerDevisV2 = () => {
       const newDevisNumber = await getNextDevisNumber();
       setDevisNumber(newDevisNumber);
       
-      const currentUser = auth.currentUser; // Assurez-vous d'importer auth depuis firebase
+      const currentUser = auth.currentUser;
+      
+      const calculatedDevis = calculateDevis(devis, parametres);
       
       const newDevis = {
-        ...devis,
-        numeroDevis: `DEV-${newDevisNumber.toString().padStart(5, '0')}`,
+        ...calculatedDevis,
+        numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`, // Modifié ici
         createdBy: currentUser ? currentUser.uid : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'brouillon',
         version: 1,
         currency: 'EUR',
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Valide 30 jours par défaut
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         images: imageUrls,
-        imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null
+        imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null,
       };
 
       console.log("Devis à envoyer:", newDevis);
@@ -514,15 +524,15 @@ const PageCreerDevisV2 = () => {
       setAlertMessage('Devis créé avec succès !');
       setAlertType('success');
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 5000); // Masquer l'alerte après 5 secondes
+      setTimeout(() => setShowAlert(false), 5000);
     } catch (error) {
       console.error("Erreur détaillée lors de la création du devis :", error);
       setAlertMessage(`Une erreur est survenue lors de la création du devis : ${error.message}`);
       setAlertType('error');
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 5000); // Masquer l'alerte après 5 secondes
+      setTimeout(() => setShowAlert(false), 5000);
     }
-  }, [validateDevis, devis, images, mainImageId]);
+  }, [validateDevis, devis, images, mainImageId, parametres]);
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
@@ -755,12 +765,18 @@ const PageCreerDevisV2 = () => {
     console.log("Paramètres mis à jour:", parametres);
   }, [parametres]);
 
+  useEffect(() => {
+    const fetchLastDevisNumber = async () => {
+      const lastNumber = await getLastDevisNumber(); // Vous devrez implémenter cette fonction dans firebase.js
+      setDevisNumber(lastNumber + 1);
+    };
+    fetchLastDevisNumber();
+  }, []);
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
       <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
-        {devisNumber 
-          ? `Devis n° DEV-${devisNumber.toString().padStart(5, '0')}` 
-          : "Nouveau devis"}
+        {`Devis n° TGN-${(devisNumber || 1).toString().padStart(5, '0')}`}
       </h1>
       <div className="mb-6">
         <div className="flex border-b">

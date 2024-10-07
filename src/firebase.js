@@ -32,10 +32,8 @@ const analytics = getAnalytics(app);
 // Initialisation de Auth
 const auth = getAuth(app); // Ajoutez cette ligne
 
-// Export des éléments nécessaires
-export { app, db, storage, analytics, auth }; // Ajoutez auth à l'export
-
-export const getNextDevisNumber = async () => {
+// Définition des fonctions getNextDevisNumber et getLastDevisNumber
+const getNextDevisNumber = async () => {
   const counterRef = doc(db, 'counters', 'devis');
   const counterSnap = await getDoc(counterRef);
   
@@ -49,3 +47,17 @@ export const getNextDevisNumber = async () => {
     return counterSnap.data().count + 1;
   }
 };
+
+const getLastDevisNumber = async () => {
+  const counterRef = doc(db, 'counters', 'devis');
+  const counterSnap = await getDoc(counterRef);
+  
+  if (!counterSnap.exists()) {
+    return 0;
+  }
+  
+  return counterSnap.data().count;
+};
+
+// Export des éléments nécessaires
+export { app, db, storage, analytics, auth, getNextDevisNumber, getLastDevisNumber };

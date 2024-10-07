@@ -288,20 +288,27 @@ const PageParametrageDevis = () => {
 
   const [notification, setNotification] = useState(null);
 
-  const showNotification = (message, type) => {
+  const showNotification = useCallback((message, type) => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000); // La notification disparaît après 3 secondes
-  };
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const docRef = doc(db, 'parametresDevis', 'default');
     try {
-      await setDoc(docRef, parametres);
-      showNotification('Les paramètres ont été mis à jour avec succès.', 'success');
+      await setDoc(doc(db, 'parametresDevis', 'default'), {
+        ...parametres,
+        tauxHoraireAdministratif: parametres.tauxHoraireAdministratif,
+        tauxHoraireCAO: parametres.tauxHoraireCAO,
+        tauxHoraireBijouterie: parametres.tauxHoraireBijouterie,
+        tauxHoraireJoaillerie: parametres.tauxHoraireJoaillerie,
+        tauxHoraireDesertissage: parametres.tauxHoraireDesertissage,
+        tauxHoraireDesign: parametres.tauxHoraireDesign,
+      });
+      showNotification('Paramètres sauvegardés avec succès', 'success');
     } catch (error) {
-      console.error("Erreur lors de la sauvegarde des paramètres :", error);
-      showNotification('Une erreur est survenue lors de la mise à jour des paramètres.', 'error');
+      console.error("Erreur lors de la sauvegarde des paramètres:", error);
+      showNotification('Erreur lors de la sauvegarde des paramètres', 'error');
     }
   };
 
