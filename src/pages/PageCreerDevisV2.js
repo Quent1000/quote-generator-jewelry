@@ -490,6 +490,13 @@ const PageCreerDevisV2 = () => {
     }
   }, [devis]);
 
+  // Déplacer la définition de uploadImage ici, avant son utilisation dans handleSubmit
+  const uploadImage = async (image) => {
+    const storageRef = ref(storage, `devis_images/${image.id}`);
+    await uploadBytes(storageRef, image.file);
+    return await getDownloadURL(storageRef);
+  };
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
@@ -501,11 +508,12 @@ const PageCreerDevisV2 = () => {
       
       const currentUser = auth.currentUser;
       
+      // Calculer tous les totaux et marges
       const calculatedDevis = calculateDevis(devis, parametres);
       
       const newDevis = {
-        ...calculatedDevis,
-        numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`, // Modifié ici
+        ...calculatedDevis, // Ceci inclut tous les calculs mis à jour
+        numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`,
         createdBy: currentUser ? currentUser.uid : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -515,6 +523,12 @@ const PageCreerDevisV2 = () => {
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         images: imageUrls,
         imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null,
+        // Assurez-vous que ces champs sont inclus et calculés correctement
+        totalGeneral: calculatedDevis.totalGeneral,
+        coutFabricationNonMarge: calculatedDevis.coutFabricationNonMarge,
+        marge: calculatedDevis.marge,
+        prixLivraison: parseFloat(devis.prixLivraison || 0),
+        remise: devis.remise,
       };
 
       console.log("Devis à envoyer:", newDevis);
@@ -753,12 +767,6 @@ const PageCreerDevisV2 = () => {
       default:
         return null;
     }
-  };
-
-  const uploadImage = async (image) => {
-    const storageRef = ref(storage, `devis_images/${image.id}`);
-    await uploadBytes(storageRef, image.file);
-    return await getDownloadURL(storageRef);
   };
 
   useEffect(() => {
