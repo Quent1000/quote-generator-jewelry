@@ -92,6 +92,7 @@ const PageCreerDevisV2 = () => {
     validUntil: null, // Date de validité
     paymentTerms: '', // Conditions de paiement
     internalNotes: '', // Notes internes
+    images: [], // Assurez-vous que c'est initialisé comme un tableau vide
   });
 
 
@@ -102,17 +103,17 @@ const PageCreerDevisV2 = () => {
 
   const [valeurMetal, setValeurMetal] = useState(0);
   const [parametres, setParametres] = useState({
-    prixSertissage: {},
-    prixDiamantsRonds: {},
-    coefficientDiamantsRonds: 1.15,
     tauxHoraires: {
       administratif: 0,
       cao: 0,
       bijouterie: 0,
       joaillerie: 0,
-      dessertissage: 0,
+      desertissage: 0,
       design: 0,
     },
+    prixSertissage: {},
+    prixDiamantsRonds: {},
+    coefficientDiamantsRonds: 1.15,
   });
   const [stylesGravure, setStylesGravure] = useState([]);
   const [diametresEtCarats, setDiametresEtCarats] = useState({
@@ -150,11 +151,11 @@ const PageCreerDevisV2 = () => {
   });
   const [tauxHoraires, setTauxHoraires] = useState({
     administratif: 0,
-    cao: 0,
     bijouterie: 0,
-    joaillerie: 0, // Changé de polissage à joaillerie
-    dessertissage: 0,
+    cao: 0,
+    desertissage: 0,
     design: 0,
+    joaillerie: 0,
   });
   const [isOrGrisSelected, setIsOrGrisSelected] = useState(false);
 
@@ -207,6 +208,20 @@ const PageCreerDevisV2 = () => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        setParametres({
+          ...data,
+          tauxHoraires: {
+            administratif: data.tauxHoraireAdministratif || 0,
+            cao: data.tauxHoraireCAO || 0,
+            bijouterie: data.tauxHoraireBijouterie || 0,
+            joaillerie: data.tauxHoraireJoaillerie || 0,
+            desertissage: data.tauxHoraireDesertissage || 0,
+            design: data.tauxHoraireDesign || 0,
+          },
+          prixSertissage: data.prixSertissage || {},
+          prixDiamantsRonds: data.prixDiamantsRonds || {},
+          coefficientDiamantsRonds: data.coefficientDiamantsRonds || 1.15,
+        });
         setParametresDevis({
           prixFonte: data.prixFonte || {},
           prixImpressionCire: data.prixImpressionCire || {},
@@ -236,14 +251,17 @@ const PageCreerDevisV2 = () => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log("Données récupérées :", data);
         setTauxHoraires({
           administratif: data.tauxHoraireAdministratif || 0,
-          cao: data.tauxHoraireCAO || 0,
           bijouterie: data.tauxHoraireBijouterie || 0,
-          joaillerie: data.tauxHoraireJoaillerie || 0, // Utilisez le taux spécifique à la joaillerie
-          dessertissage: data.tauxHoraireDesertissage || 0,
+          cao: data.tauxHoraireCAO || 0,
+          desertissage: data.tauxHoraireDesertissage || 0,
           design: data.tauxHoraireDesign || 0,
+          joaillerie: data.tauxHoraireJoaillerie || 0,
         });
+      } else {
+        console.error("Aucun document trouvé !");
       }
     };
 
@@ -251,7 +269,9 @@ const PageCreerDevisV2 = () => {
   }, []);
 
   const updateDevisCalculations = useCallback(() => {
-    setDevis(prevDevis => calculateDevis(prevDevis, parametres));
+    if (parametres.tauxHoraires) {
+      setDevis(prevDevis => calculateDevis(prevDevis, parametres));
+    }
   }, [parametres]);
 
   useEffect(() => {
@@ -269,7 +289,7 @@ const PageCreerDevisV2 = () => {
     devis.tarifImpressionResine,
     devis.prixLivraison,
     devis.remise,
-    devis.options, // Ajoutez cette ligne pour recalculer lorsque les options changent
+    devis.options,
     devis.gravure,
     devis.styleGravure,
     updateDevisCalculations
@@ -366,7 +386,7 @@ const PageCreerDevisV2 = () => {
         sertissage: '',
         carat: 0,
         prixUnitaire: 0,
-        prixTotalDiamants: 0,
+        prixTotal: 0,
         prixSertissage: 0,
         coutSertissageUnitaire: 0
       }]
@@ -436,34 +456,57 @@ const PageCreerDevisV2 = () => {
     calculerPrixSertissageAutresPierres();
   }, [calculerPrixDiamants, calculerPrixSertissage, calculerPrixAutresPierres, calculerPrixSertissageAutresPierres]);
 
-  const onDrop = useCallback((acceptedFiles) => {
-    const newImages = acceptedFiles.map(file => ({
-      id: uuidv4(),
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    setImages(prevImages => {
-      const updatedImages = [...prevImages, ...newImages];
-      if (!mainImageId && updatedImages.length > 0) {
-        setMainImageId(updatedImages[0].id);
+  const uploadImage = useCallback(async (file) => {
+    if (!file) return null;
+    const storageRef = ref(storage, `devis_images/${uuidv4()}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  }, []);
+
+  const onDrop = useCallback(async (acceptedFiles) => {
+    const newImages = [...images];
+    for (const file of acceptedFiles) {
+      const imageUrl = await uploadImage(file);
+      if (imageUrl) {
+        const newImage = {
+          id: uuidv4(),
+          url: imageUrl,
+          preview: URL.createObjectURL(file)
+        };
+        newImages.push(newImage);
+        if (!mainImageId) {
+          setMainImageId(newImage.id);
+        }
       }
-      return updatedImages;
-    });
-  }, [mainImageId]);
+    }
+    setImages(newImages);
+    setDevis(prevDevis => ({ ...prevDevis, images: newImages }));
+  }, [images, uploadImage, mainImageId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  const removeImage = (id) => {
-    setImages(prevImages => prevImages.filter(image => image.id !== id));
-    if (mainImageId === id) {
-      setMainImageId(images.length > 1 ? images[0].id : null);
-    }
-  };
+  const removeImage = useCallback((id) => {
+    setImages(prevImages => prevImages.filter(img => img.id !== id));
+    setDevis(prevDevis => ({
+      ...prevDevis,
+      images: prevDevis.images.filter(img => img.id !== id)
+    }));
+  }, []);
 
-  const setMainImage = (imageId) => {
-    console.log("Changement d'image principale. Nouvel ID:", imageId);
-    setMainImageId(imageId);
-  };
+  const setMainImage = useCallback((id) => {
+    setImages(prevImages => prevImages.map(img => ({
+      ...img,
+      isMain: img.id === id
+    })));
+    setMainImageId(id);
+    setDevis(prevDevis => ({
+      ...prevDevis,
+      images: prevDevis.images.map(img => ({
+        ...img,
+        isMain: img.id === id
+      }))
+    }));
+  }, []);
 
   const handlePaste = (event) => {
     const items = event.clipboardData.items;
@@ -490,29 +533,20 @@ const PageCreerDevisV2 = () => {
     }
   }, [devis]);
 
-  // Déplacer la définition de uploadImage ici, avant son utilisation dans handleSubmit
-  const uploadImage = async (image) => {
-    const storageRef = ref(storage, `devis_images/${image.id}`);
-    await uploadBytes(storageRef, image.file);
-    return await getDownloadURL(storageRef);
-  };
-
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       validateDevis();
-      const imageUrls = await Promise.all(images.map(uploadImage));
       
       const newDevisNumber = await getNextDevisNumber();
       setDevisNumber(newDevisNumber);
       
       const currentUser = auth.currentUser;
       
-      // Calculer tous les totaux et marges
       const calculatedDevis = calculateDevis(devis, parametres);
       
       const newDevis = {
-        ...calculatedDevis, // Ceci inclut tous les calculs mis à jour
+        ...calculatedDevis,
         numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`,
         createdBy: currentUser ? currentUser.uid : null,
         createdAt: new Date().toISOString(),
@@ -521,14 +555,11 @@ const PageCreerDevisV2 = () => {
         version: 1,
         currency: 'EUR',
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        images: imageUrls,
-        imageprincipale: imageUrls[images.findIndex(img => img.id === mainImageId)] || null,
-        // Assurez-vous que ces champs sont inclus et calculés correctement
-        totalGeneral: calculatedDevis.totalGeneral,
-        coutFabricationNonMarge: calculatedDevis.coutFabricationNonMarge,
-        marge: calculatedDevis.marge,
-        prixLivraison: parseFloat(devis.prixLivraison || 0),
-        remise: devis.remise,
+        images: images.map(img => ({ 
+          id: img.id, 
+          url: img.url, 
+          isMain: img.id === mainImageId 
+        })),
       };
 
       console.log("Devis à envoyer:", newDevis);
@@ -546,7 +577,7 @@ const PageCreerDevisV2 = () => {
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 5000);
     }
-  }, [validateDevis, devis, images, mainImageId, parametres]);
+  }, [devis, parametres, images, validateDevis, mainImageId]);
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
@@ -738,15 +769,15 @@ const PageCreerDevisV2 = () => {
         return (
           <ImagesDevis
             images={images}
+            mainImageId={mainImageId}
             onDrop={onDrop}
             removeImage={removeImage}
-            setMainImage={setMainImage}  // Utilisez setMainImage ici
-            mainImageId={mainImageId}
-            darkMode={darkMode}
+            setMainImage={setMainImage}
             getRootProps={getRootProps}
             getInputProps={getInputProps}
             isDragActive={isDragActive}
             handlePaste={handlePaste}
+            darkMode={darkMode}
           />
         );
       case 'resume':

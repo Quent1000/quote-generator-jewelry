@@ -124,18 +124,32 @@ export const calculerMarge = (devis, parametres, tauxHoraires) => {
 };
 
 export const calculateDevis = (devis, parametres) => {
+  const tauxHoraires = {
+    administratif: parametres.tauxHoraireAdministratif || 0,
+    cao: parametres.tauxHoraireCAO || 0,
+    bijouterie: parametres.tauxHoraireBijouterie || 0,
+    joaillerie: parametres.tauxHoraireJoaillerie || 0,
+    desertissage: parametres.tauxHoraireDesertissage || 0,
+    design: parametres.tauxHoraireDesign || 0,
+  };
+
+  // Vérification supplémentaire
+  if (Object.values(tauxHoraires).every(taux => taux === 0)) {
+    console.warn("Tous les taux horaires sont à zéro dans calculateDevis");
+  }
+
   const totalMetal = calculerTotalMetal(devis, parametres);
   const totalDiamants = calculerTotalDiamants(devis, parametres);
   const totalAutresPierres = calculerTotalAutresPierres(devis, parametres);
   const totalGravureEtFinition = calculerTotalGravureEtFinition(devis, parametres);
   const totalComposants = calculerTotalComposants(devis, parametres);
-  const totalTemps = calculerTotalTemps(devis, parametres.tauxHoraires, parametres);
+  const totalTemps = calculerTotalTemps(devis, tauxHoraires, parametres);
   const totalImpression3DEtFonte = calculerTotalImpression3DEtFonte(devis, parametres);
   const fraisFontePalladium = calculerFraisFontePalladium(devis, parametres);
   const totalSertissage = calculerTotalSertissage(devis, parametres);
-  const totalGeneral = calculerTotalGeneral(devis, parametres, parametres.tauxHoraires);
-  const coutFabricationNonMarge = calculerCoutFabricationNonMarge(devis, parametres, parametres.tauxHoraires);
-  const marge = calculerMarge(devis, parametres, parametres.tauxHoraires);
+  const totalGeneral = calculerTotalGeneral(devis, parametres, tauxHoraires);
+  const coutFabricationNonMarge = calculerCoutFabricationNonMarge(devis, parametres, tauxHoraires);
+  const marge = calculerMarge(devis, parametres, tauxHoraires);
 
   return {
     ...devis,

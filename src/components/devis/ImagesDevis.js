@@ -64,10 +64,10 @@ const ImagesDevis = ({
         </p>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-4">
-        {images.map((image) => (
+        {Array.isArray(images) && images.map((image) => (
           <div key={image.id} className={imageContainerClass}>
             <img
-              src={image.preview}
+              src={image.preview || image.url}
               alt="Aperçu"
               className="w-full h-32 object-cover rounded-lg"
             />

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import CustomSelect from './CustomSelect';
 import {
   calculerTotalMetal,
@@ -25,17 +25,30 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     return `${heures}h ${minutesRestantes}min`;
   }, []);
 
-  // Utiliser les fonctions importées de devisUtils.js
-  const totalTemps = useCallback(() => calculerTotalTemps(devis, tauxHoraires, parametres), [devis, tauxHoraires, parametres]);
-  const totalSertissage = useCallback(() => calculerTotalSertissage(devis, parametres), [devis, parametres]);
-  const totalGravureEtFinition = useCallback(() => calculerTotalGravureEtFinition(devis, parametres), [devis, parametres]);
-  const totalComposants = useCallback(() => calculerTotalComposants(devis, parametres), [devis, parametres]);
-  const fraisFontePalladium = useCallback(() => calculerFraisFontePalladium(devis, parametres), [devis, parametres]);
-  const totalImpression3DEtFonte = useCallback(() => calculerTotalImpression3DEtFonte(devis, parametres), [devis, parametres]);
-  const totalGeneral = useCallback(() => calculerTotalGeneral(devis, parametres, tauxHoraires), [devis, parametres, tauxHoraires]);
-  const coutFabricationNonMarge = useCallback(() => calculerCoutFabricationNonMarge(devis, parametres, tauxHoraires), [devis, parametres, tauxHoraires]);
-  const marge = useCallback(() => calculerMarge(devis, parametres, tauxHoraires), [devis, parametres, tauxHoraires]);
-  const totalMetal = useCallback(() => calculerTotalMetal(devis, parametres), [devis, parametres]);
+  // Utiliser useMemo pour les calculs
+  const calculatedValues = useMemo(() => {
+    if (!tauxHoraires) {
+      console.warn("tauxHoraires est undefined dans ResumeDevis");
+      return null;
+    }
+
+    return {
+      totalTemps: calculerTotalTemps(devis, tauxHoraires, parametres),
+      totalSertissage: calculerTotalSertissage(devis, parametres),
+      totalGravureEtFinition: calculerTotalGravureEtFinition(devis, parametres),
+      totalComposants: calculerTotalComposants(devis, parametres),
+      fraisFontePalladium: calculerFraisFontePalladium(devis, parametres),
+      totalImpression3DEtFonte: calculerTotalImpression3DEtFonte(devis, parametres),
+      totalGeneral: calculerTotalGeneral(devis, parametres, tauxHoraires),
+      coutFabricationNonMarge: calculerCoutFabricationNonMarge(devis, parametres, tauxHoraires),
+      marge: calculerMarge(devis, parametres, tauxHoraires),
+      totalMetal: calculerTotalMetal(devis, parametres)
+    };
+  }, [devis, tauxHoraires, parametres]);
+
+  if (!calculatedValues) {
+    return null; // ou affichez un message de chargement
+  }
 
   const bgClass = darkMode ? 'bg-gray-800' : 'bg-white';
   const textClass = darkMode ? 'text-white' : 'text-gray-900';
@@ -124,7 +137,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
             </div>
             <div className="font-semibold">
               <span>Coût total:</span>
-              <span className="float-right">{formatPrix(totalTemps())}</span>
+              <span className="float-right">{formatPrix(calculatedValues.totalTemps)}</span>
             </div>
           </div>
         </Section>
@@ -146,7 +159,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
               </div>
             ))}
             <InfoItem label="Total autres pierres" value={formatPrix(calculerTotalAutresPierres(devis, parametres))} />
-            <InfoItem label="Total sertissage" value={formatPrix(totalSertissage())} />
+            <InfoItem label="Total sertissage" value={formatPrix(calculatedValues.totalSertissage)} />
           </div>
         </Section>
 
@@ -166,12 +179,12 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           {devis.metal === "Or Gris Palladié" && (
             <InfoItem 
               label="Frais fonte palladium" 
-              value={formatPrix(fraisFontePalladium())} 
+              value={formatPrix(calculatedValues.fraisFontePalladium)} 
             />
           )}
           <InfoItem 
             label="Total" 
-            value={formatPrix(totalImpression3DEtFonte() + fraisFontePalladium())} 
+            value={formatPrix(calculatedValues.totalImpression3DEtFonte + calculatedValues.fraisFontePalladium)} 
           />
         </Section>
 
@@ -179,7 +192,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           <div className="space-y-4">
             {renderComposants(devis.composantsFrequents, "Composants fréquents")}
             {renderComposants(devis.composantsLibres, "Composants libres")}
-            <InfoItem label="Total composants" value={formatPrix(totalComposants())} />
+            <InfoItem label="Total composants" value={formatPrix(calculatedValues.totalComposants)} />
           </div>
         </Section>
 
@@ -209,7 +222,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
               value={`${devis.options.poinconTitre === 'gravureLaser' ? 'Gravure laser' : 'Frappe'} - ${formatPrix(parametres.prixPoincons.poinconTitre[devis.options.poinconTitre])}`} 
             />
           )}
-          <InfoItem label="Total Gravure et Finition" value={formatPrix(totalGravureEtFinition())} />
+          <InfoItem label="Total Gravure et Finition" value={formatPrix(calculatedValues.totalGravureEtFinition)} />
         </Section>
       </div>
 
@@ -267,13 +280,13 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-lg font-semibold mb-2">Total Général</p>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
-              {formatPrix(totalGeneral())}
+              {formatPrix(calculatedValues.totalGeneral)}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-lg font-semibold mb-2">Marge Totale</p>
             <p className="text-3xl font-bold text-teal-600 dark:text-teal-300">
-              {formatPrix(marge())}
+              {formatPrix(calculatedValues.marge)}
             </p>
           </div>
         </div>
@@ -290,11 +303,11 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         <div className="mt-6 space-y-2">
           <InfoItem
             label="Coût de fabrication non margé"
-            value={formatPrix(coutFabricationNonMarge())}
+            value={formatPrix(calculatedValues.coutFabricationNonMarge)}
           />
           <InfoItem
             label="Prix total du métal (non facturé)"
-            value={formatPrix(totalMetal())}
+            value={formatPrix(calculatedValues.totalMetal)}
           />
           <InfoItem
             label="Prix de la livraison"

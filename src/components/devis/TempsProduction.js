@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import CustomSelect from './CustomSelect';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../Tooltip'; // Assurez-vous d'avoir un composant Tooltip
@@ -13,12 +13,19 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
     minutes: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => ({ value: m, label: `${m} min` }))
   };
 
-  const calculerPrix = (temps, tauxHoraire) => {
+  const calculerPrix = useCallback((temps, type) => {
     const heures = temps?.heures || 0;
     const minutes = temps?.minutes || 0;
     const tempsTotal = heures + minutes / 60;
-    return tempsTotal * tauxHoraire;
-  };
+    return tempsTotal * (tauxHoraires[type] || 0);
+  }, [tauxHoraires]);
+
+  const calculerTotalTemps = useMemo(() => {
+    const types = ['administratif', 'cao', 'bijouterie', 'joaillerie', 'dessertissage', 'design'];
+    return types.reduce((total, type) => {
+      return total + calculerPrix(devis.tempsProduction[type], type);
+    }, 0);
+  }, [devis.tempsProduction, calculerPrix]);
 
   const renderOption = (label, content, tooltipContent = null) => (
     <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -57,13 +64,6 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
     </div>
   );
 
-  const calculerTotalTemps = () => {
-    const types = ['administratif', 'cao', 'bijouterie', 'joaillerie', 'dessertissage', 'design'];
-    return types.reduce((total, type) => {
-      return total + calculerPrix(devis.tempsProduction[type], tauxHoraires[type]);
-    }, 0);
-  };
-
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Temps de production</h2>
@@ -72,7 +72,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('administratif', 'Administratif')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.administratif, tauxHoraires.administratif).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.administratif, 'administratif').toFixed(2)} €
             </p>
           </>
         ))}
@@ -80,7 +80,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('cao', 'CAO')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.cao, tauxHoraires.cao).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.cao, 'cao').toFixed(2)} €
             </p>
           </>
         ))}
@@ -88,7 +88,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('bijouterie', 'Bijouterie')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.bijouterie, tauxHoraires.bijouterie).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.bijouterie, 'bijouterie').toFixed(2)} €
             </p>
           </>
         ), "Utilisé pour le calcul du prix des pièces fabriquées en série ou des pièces standard, nécessitant des processus de production plus rapides et automatisés.")}
@@ -96,7 +96,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('joaillerie', 'Joaillerie')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.joaillerie, tauxHoraires.joaillerie).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.joaillerie, 'joaillerie').toFixed(2)} €
             </p>
           </>
         ), "Utilisé pour le calcul du prix des pièces sur mesure ou uniques, demandant des techniques artisanales plus poussées et un temps de travail plus long.")}
@@ -104,7 +104,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('dessertissage', 'Désertissage')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.dessertissage, tauxHoraires.dessertissage).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.dessertissage, 'dessertissage').toFixed(2)} €
             </p>
           </>
         ))}
@@ -112,7 +112,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
           <>
             {renderTempsSelect('design', 'Design')}
             <p className="text-right font-medium mt-2">
-              Prix : {calculerPrix(devis.tempsProduction.design, tauxHoraires.design).toFixed(2)} €
+              Prix : {calculerPrix(devis.tempsProduction.design, 'design').toFixed(2)} €
             </p>
           </>
         ))}
@@ -120,7 +120,7 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
       <div className="mt-8 bg-teal-100 dark:bg-teal-900 p-4 rounded-lg">
         <h3 className="text-xl font-semibold text-center mb-2">Prix total temps de production</h3>
         <p className="text-3xl text-center font-bold text-teal-600 dark:text-teal-300">
-          {calculerTotalTemps().toFixed(2)} €
+          {calculerTotalTemps.toFixed(2)} €
         </p>
       </div>
     </div>
