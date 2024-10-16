@@ -2,14 +2,18 @@ import React from 'react';
 import { DocumentTextIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor }) => {
+  // Trouver l'image principale
+  const mainImage = devis.images && devis.images.find(img => img.isMain);
+  const imageUrl = mainImage ? mainImage.url : null;
+
   // Assurez-vous d'utiliser le bon champ pour le montant total
   const montantTotal = devis.totalGeneral || devis.montantTotal || 0;
 
   return (
     <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105`}>
-      {devis.images && devis.images.length > 0 && (
+      {imageUrl && (
         <div className="w-full h-48 overflow-hidden">
-          <img src={devis.images[0]} alt={`Devis ${devis.numeroDevis || ''}`} className="w-full h-full object-cover" />
+          <img src={imageUrl} alt={`Devis ${devis.numeroDevis || ''}`} className="w-full h-full object-cover" />
         </div>
       )}
       <div className="p-6">
@@ -22,7 +26,9 @@ const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor 
             {devis.status || 'Non défini'}
           </span>
         </div>
-        <p className="text-sm mb-2"><span className="font-medium">Client:</span> {devis.client || 'Non défini'}</p>
+        <p className="text-sm mb-2">
+          <span className="font-medium">Client:</span> {devis.clientInfo.nom} - {devis.clientInfo.entreprise}
+        </p>
         <p className="text-sm mb-2"><span className="font-medium">Date:</span> {formatDate(devis.createdAt)}</p>
         <p className="text-sm mb-2"><span className="font-medium">Catégorie:</span> {devis.categorie || 'Non défini'}</p>
         <p className="text-sm mb-2"><span className="font-medium">Sous-catégorie:</span> {devis.sousCategorie || 'Non défini'}</p>

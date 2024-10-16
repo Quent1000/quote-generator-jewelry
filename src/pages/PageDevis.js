@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import CardDevis from '../components/devis/CardDevis';
 
 const PageDevis = () => {
@@ -15,20 +15,43 @@ const PageDevis = () => {
         const devisRef = collection(db, 'devis');
         const q = query(devisRef, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
-        const devisData = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          // Assurez-vous que totalGeneral est bien récupéré
+        console.log("Nombre de devis récupérés:", querySnapshot.docs.length);
+        
+        const devisData = await Promise.all(querySnapshot.docs.map(async (devisDoc) => {
+          const data = devisDoc.data();
+          let clientInfo = { nom: 'Non défini', entreprise: 'Non définie' };
+          
+          if (data.client) {
+            const clientDoc = await getDoc(doc(db, 'clients', data.client));
+            if (clientDoc.exists()) {
+              const clientData = clientDoc.data();
+              clientInfo = {
+                nom: `${clientData.informationsPersonnelles.prenom} ${clientData.informationsPersonnelles.nom}`,
+                entreprise: clientData.entrepriseId ? 'À récupérer' : 'Particulier'
+              };
+              
+              if (clientData.entrepriseId) {
+                const entrepriseDoc = await getDoc(doc(db, 'entreprises', clientData.entrepriseId));
+                if (entrepriseDoc.exists()) {
+                  clientInfo.entreprise = entrepriseDoc.data().nom;
+                }
+              }
+            }
+          }
+          
           return {
-            id: doc.id,
+            id: devisDoc.id,
             ...data,
             totalGeneral: data.totalGeneral || data.montantTotal || 0,
+            clientInfo: clientInfo
           };
-        });
-        console.log("Devis récupérés:", devisData);
+        }));
+        
+        console.log("Devis traités:", devisData);
         setDevis(devisData);
         setIsLoading(false);
       } catch (error) {
-        console.error("Erreur lors de la récupération des devis:", error);
+        console.error("Erreur détaillée lors de la récupération des devis:", error);
         setIsLoading(false);
       }
     };
