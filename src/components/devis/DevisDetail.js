@@ -1,5 +1,20 @@
 import React, { useState } from 'react';
-import { XMarkIcon, ChevronDownIcon, ChevronUpIcon, StarIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronDownIcon, ChevronUpIcon, StarIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import { PDFViewer, Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
+import logoTGN409 from '../../assets/logo-tgn409.png';
+
+// Supprimez ces lignes
+// import RobotoRegular from '../../assets/fonts/Roboto-Regular.ttf';
+// import RobotoBold from '../../assets/fonts/Roboto-Bold.ttf';
+
+// Remplacez par ceci
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf', fontWeight: 'normal' },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-bold-webfont.ttf', fontWeight: 'bold' },
+  ]
+});
 
 const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
   const [expandedSections, setExpandedSections] = useState({
@@ -14,6 +29,8 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
     images: false,
   });
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const clientInfo = devis.clientInfo || {};
 
@@ -52,6 +69,132 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
   const handleSetMainImage = (imageId) => {
     onUpdateMainImage(devis.id, imageId);
   };
+
+  const handleGeneratePdf = () => {
+    setShowPdfPreview(true);
+  };
+
+  const handleSavePdf = () => {
+    // Logique pour sauvegarder le PDF
+    setShowPdfPreview(false);
+  };
+
+  // Ajoutez cette fonction pour formater les montants
+  const formatMontant = (montant) => {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
+  };
+
+  // Styles pour le PDF
+  const styles = StyleSheet.create({
+    page: { 
+      padding: 30,
+      fontFamily: 'Roboto',
+      fontSize: 12,
+    },
+    header: { 
+      flexDirection: 'row', 
+      justifyContent: 'space-between', 
+      marginBottom: 20,
+      borderBottom: 1,
+      paddingBottom: 10,
+    },
+    logo: { width: 100 },
+    companyInfo: { textAlign: 'right' },
+    title: { 
+      fontSize: 18, 
+      fontWeight: 'bold', 
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    section: { marginBottom: 10 },
+    sectionTitle: { 
+      fontSize: 14, 
+      fontWeight: 'bold', 
+      marginBottom: 5,
+      backgroundColor: '#f0f0f0',
+      padding: 5,
+    },
+    row: { 
+      flexDirection: 'row', 
+      justifyContent: 'space-between',
+      marginBottom: 5,
+    },
+    footer: { 
+      position: 'absolute', 
+      bottom: 30, 
+      left: 30, 
+      right: 30, 
+      fontSize: 8,
+      textAlign: 'center',
+    },
+    legalText: {
+      fontSize: 8,
+      marginTop: 20,
+      textAlign: 'justify',
+    },
+  });
+
+  // Composant PDF
+  const DevisPDF = ({ devis }) => (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Image style={styles.logo} src={logoTGN409} />
+          <View style={styles.companyInfo}>
+            <Text>TGN 409</Text>
+            <Text>21 montée des soldats</Text>
+            <Text>69300 Caluire et cuire</Text>
+          </View>
+        </View>
+        
+        <Text style={styles.title}>Devis n° {devis.numeroDevis}</Text>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Client</Text>
+          <Text>{devis.clientInfo.nom}</Text>
+          <Text>{devis.clientInfo.entreprise}</Text>
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Détails du produit</Text>
+          <View style={styles.row}>
+            <Text>Catégorie:</Text>
+            <Text>{devis.categorie}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text>Métal:</Text>
+            <Text>{devis.metal}</Text>
+          </View>
+          {/* Ajoutez d'autres détails du produit ici */}
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Totaux</Text>
+          <View style={styles.row}>
+            <Text>Montant total:</Text>
+            <Text>{formatMontant(devis.totalGeneral)}</Text>
+          </View>
+          {/* Ajoutez d'autres totaux ici */}
+        </View>
+        
+        <Text style={styles.legalText}>
+          La fabrication d'un bijou exige environ 50% de son poids métal en plus, dont l'excédent métal hors pertes reste la propriété du client.
+          L'approvisionnement métal ne peut se faire qu'en métal fin, à partir d'un compte officiel qui sera alimenté par le client.
+          Si le montant est trop important il sera demandé le règlement par avance. Le client en sera averti avant toute exécution.
+          Acompte obligatoire réalisé par virement uniquement sur le compte de TGN 409 dont les informations bancaires sont signifiées en bas de page.
+          Une facture avec règlement à réception sera émise lors de la livraison de la commande. Dans le cas d'une nouvelle relation commerciale, il sera demandé un règlement avant envoi.
+
+          Pour une commande dont la prestation de fabrication est inférieure à 150,00 Euros HT, TGN 409 s'autorise le droit d'ajouter des frais de gestion de dossier de 70,00 Euros HT.
+
+          TGN 409 ne peut être tenue pour responsable en cas de casse de pierres clients durant l'opération de dessertissage, ni même s'il est constaté après dessertissage que des problèmes sur les pierres étaient non apparents du fait d'être cachés sous le métal qui les maintenait.
+        </Text>
+        
+        <Text style={styles.footer}>
+          TGN 409 - SIRET: XXXXXXXXX - TVA: FRXXXXXXXXX
+        </Text>
+      </Page>
+    </Document>
+  );
 
   const renderImages = () => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -108,6 +251,24 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
     </div>
   );
 
+  const TruncatedText = ({ text, maxLength = 150 }) => {
+    if (text.length <= maxLength) return <p className="whitespace-pre-wrap">{text}</p>;
+    
+    return (
+      <div>
+        <p className="whitespace-pre-wrap">
+          {showFullDescription ? text : `${text.substring(0, maxLength)}...`}
+        </p>
+        <button
+          onClick={() => setShowFullDescription(!showFullDescription)}
+          className="mt-2 text-teal-500 hover:text-teal-600 underline focus:outline-none"
+        >
+          {showFullDescription ? 'Voir moins' : 'Voir plus'}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className={`fixed inset-0 z-50 overflow-y-auto ${darkMode ? 'bg-gray-900 bg-opacity-75' : 'bg-gray-100 bg-opacity-75'}`}>
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -135,6 +296,11 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
                 <InfoItem label="Date de création" value={devis.createdAt ? new Date(devis.createdAt).toLocaleDateString() : 'Non définie'} />
                 <InfoItem label="Statut" value={devis.status} />
                 <InfoItem label="Titre du devis" value={devis.titreDevis} />
+                {/* Ajout de l'information sur le créateur du devis */}
+                <InfoItem 
+                  label="Créé par" 
+                  value={devis.createdByUser ? `${devis.createdByUser.prenom} ${devis.createdByUser.nom}` : 'Non spécifié'} 
+                />
               </Section>
               
               <Section title="Détails du produit" id="details">
@@ -143,7 +309,12 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
                 <InfoItem label="Métal" value={devis.metal} />
                 <InfoItem label="Taille" value={devis.taille} />
                 <InfoItem label="Poids estimé" value={devis.poidsEstime ? `${devis.poidsEstime} g` : 'Non défini'} />
-                <InfoItem label="Description" value={devis.description} />
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Description:</h4>
+                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                    <TruncatedText text={devis.description || 'Aucune description fournie'} />
+                  </div>
+                </div>
               </Section>
               
               <Section title="Gravure et finition" id="gravureFinition">
@@ -218,14 +389,23 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
             {renderImages()}
           </Section>
           
-          <div className="mt-6">
+          <div className="mt-6 flex justify-between">
             <button
               onClick={onClose}
               className={`px-4 py-2 rounded ${
-                darkMode ? 'bg-teal-600 hover:bg-teal-700' : 'bg-teal-500 hover:bg-teal-600'
+                darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-300 hover:bg-gray-400'
               } text-white`}
             >
               Fermer
+            </button>
+            <button
+              onClick={handleGeneratePdf}
+              className={`px-4 py-2 rounded flex items-center ${
+                darkMode ? 'bg-teal-600 hover:bg-teal-700' : 'bg-teal-500 hover:bg-teal-600'
+              } text-white`}
+            >
+              <DocumentIcon className="h-5 w-5 mr-2" />
+              Aperçu PDF
             </button>
           </div>
         </div>
@@ -248,6 +428,20 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
             >
               <XMarkIcon className="h-8 w-8" />
             </button>
+          </div>
+        </div>
+      )}
+      
+      {showPdfPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-4 rounded-lg w-full h-full max-w-full max-h-full flex flex-col">
+            <PDFViewer width="100%" height="100%" className="flex-grow">
+              <DevisPDF devis={devis} />
+            </PDFViewer>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowPdfPreview(false)} className="mr-2 px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Fermer</button>
+              <button onClick={handleSavePdf} className="px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600">Enregistrer PDF</button>
+            </div>
           </div>
         </div>
       )}

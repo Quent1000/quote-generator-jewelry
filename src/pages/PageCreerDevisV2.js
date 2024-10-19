@@ -185,9 +185,13 @@ const PageCreerDevisV2 = () => {
       const devisDoc = await getDoc(doc(db, 'devis', id));
       if (devisDoc.exists()) {
         const devisData = devisDoc.data();
-        setDevis(devisData);
-        setImages(devisData.images || []); // Ajoutez cette ligne
-        setMainImageId(devisData.images?.find(img => img.isMain)?.id || null); // Et celle-ci
+        setDevis({
+          ...devisData,
+          createdByUser: devisData.createdByUser || { prenom: 'Non spécifié', nom: 'Non spécifié' },
+          createdAt: devisData.createdAt || new Date().toISOString(),
+        });
+        setImages(devisData.images || []);
+        setMainImageId(devisData.images?.find(img => img.isMain)?.id || null);
         setDevisNumber(devisData.numeroDevis.split('-')[1]);
       } else {
         console.error("Devis non trouvé");
@@ -570,12 +574,19 @@ const PageCreerDevisV2 = () => {
       validateDevis();
       
       const currentUser = auth.currentUser;
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
       
       const calculatedDevis = calculateDevis(devis, parametres);
       
       const devisToSave = {
         ...calculatedDevis,
         updatedAt: new Date().toISOString(),
+        createdByUser: {
+          prenom: userData.prenom,
+          nom: userData.nom
+        },
+        createdAt: isEditing ? devis.createdAt : new Date().toISOString(), // Garder la date originale si en mode édition
         images: images.map(img => ({ 
           id: img.id, 
           url: img.url, 
@@ -714,7 +725,7 @@ const PageCreerDevisV2 = () => {
           disabled={isFirstTab}
         >
           <ChevronLeftIcon className="w-5 h-5 inline-block mr-2" />
-          Précédent
+          Préc��dent
         </button>
         {!isLastTab && (
           <button

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import CustomSelect from './CustomSelect';
 import {
   calculerTotalMetal,
@@ -16,6 +16,8 @@ import {
 } from '../../utils/devisUtils';
 
 const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit, isEditing }) => {
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
   console.log("ResumeDevis props:", { devis, darkMode, clients, parametres, tauxHoraires });
 
   const formatPrix = useCallback((prix) => `${parseFloat(prix || 0).toFixed(2)} €`, []);
@@ -64,9 +66,9 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     if (client) {
       const infos = client.informationsPersonnelles || {};
       const nomComplet = `${infos.prenom || ''} ${infos.nom || ''}`.trim();
-      return client.entreprise?.nom ? `${nomComplet} - ${client.entreprise.nom}` : nomComplet || 'Nom non spécifié';
+      return client.entreprise?.nom ? `${nomComplet} - ${client.entreprise.nom}` : nomComplet || 'À remplir';
     }
-    return 'Client non spécifié';
+    return 'À sélectionner';
   };
 
   const Section = ({ title, children }) => (
@@ -79,7 +81,9 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
   const InfoItem = ({ label, value }) => (
     <div className="flex justify-between items-center">
       <span className="font-medium text-gray-600 dark:text-gray-400">{label}</span>
-      <span className="text-gray-800 dark:text-gray-200">{value || 'Non spécifié'}</span>
+      <span className="text-gray-800 dark:text-gray-200">
+        {value === 'Non spécifié' || value === 'Non défini' ? 'À remplir' : value}
+      </span>
     </div>
   );
 
@@ -102,25 +106,63 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
     </div>
   );
 
+  const TruncatedText = ({ text, maxLength = 150 }) => {
+    if (!text) return <p>Aucune description fournie</p>;
+    if (text.length <= maxLength) return <p className="whitespace-pre-wrap">{text}</p>;
+    
+    return (
+      <div>
+        <p className="whitespace-pre-wrap">
+          {showFullDescription ? text : `${text.substring(0, maxLength)}...`}
+        </p>
+        <button
+          onClick={() => setShowFullDescription(!showFullDescription)}
+          className="mt-2 text-teal-500 hover:text-teal-600 underline focus:outline-none"
+        >
+          {showFullDescription ? 'Voir moins' : 'Voir plus'}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className={`p-6 rounded-xl shadow-lg ${bgClass} ${textClass}`}>
       <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
         Résumé du Devis
       </h2>
       
+      {!isEditing && (
+        <div className="mb-6 p-4 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100 rounded-lg">
+          <p>Ce devis est en cours de création. Les champs marqués "À remplir" doivent être complétés avant la finalisation.</p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Informations générales">
           <InfoItem label="Client" value={getClientName(devis.client)} />
-          <InfoItem label="Titre du devis" value={devis.titreDevis} />
-          <InfoItem label="Catégorie" value={devis.categorie} />
-          <InfoItem label="Sous-catégorie" value={devis.sousCategorie} />
+          <InfoItem label="Titre du devis" value={devis.titreDevis || 'À remplir'} />
+          <InfoItem label="Catégorie" value={devis.categorie || 'À remplir'} />
+          <InfoItem label="Sous-catégorie" value={devis.sousCategorie || 'À remplir'} />
+          <InfoItem 
+            label="Créé par" 
+            value={devis.createdByUser ? `${devis.createdByUser.prenom} ${devis.createdByUser.nom}` : 'En attente de création'} 
+          />
+          <InfoItem 
+            label="Date de création" 
+            value={devis.createdAt ? new Date(devis.createdAt).toLocaleDateString() : 'En attente de création'} 
+          />
         </Section>
 
         <Section title="Détails du produit">
           <InfoItem label="Métal" value={devis.metal} />
           <InfoItem label="Poids estimé" value={devis.poidsEstime ? `${devis.poidsEstime} g` : null} />
           <InfoItem label="Taille" value={devis.taille} />
-          <InfoItem label="Description" value={devis.description} />
+          <div className="mt-4">
+            <h4 className="font-semibold mb-2">Description:</h4>
+            <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+              <TruncatedText text={devis.description} />
+            </div>
+          </div>
         </Section>
 
         <Section title="Temps de production">
