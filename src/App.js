@@ -52,6 +52,7 @@ const AppContent = () => {
           <Route path="/gestion-utilisateurs" element={<ProtectedPageGestionUtilisateurs />} />
           <Route path="/creer-devis-v2" element={<PageCreerDevisV2 />} />
           <Route path="/devis" element={<PageDevis />} />
+          <Route path="/modifier-devis/:devisId" element={<PageCreerDevisV2 />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

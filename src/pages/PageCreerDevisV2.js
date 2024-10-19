@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { db, storage, getNextDevisNumber, getLastDevisNumber, auth } from '../firebase';  // Ajoutez getNextDevisNumber ici
-import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useDropzone } from 'react-dropzone';
@@ -9,6 +9,7 @@ import NouveauClientPopup from '../components/clients/NouveauClientPopup';
 import DiamantsPierres from '../components/devis/DiamantsPierres';
 import ComposantsEtAutres from '../components/devis/ComposantsEtAutres'; // Ajoutez cette ligne
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { useParams, useNavigate } from 'react-router-dom';
 
 // Importation des composants
 import InformationsEtDetails from '../components/devis/InformationsEtDetails';
@@ -20,6 +21,8 @@ import ResumeDevis from '../components/devis/ResumeDevis'; // Créez ce composan
 import { calculateDevis } from '../utils/devisUtils';
 
 const PageCreerDevisV2 = () => {
+  const { devisId } = useParams();
+  const navigate = useNavigate();
   const { darkMode } = useAppContext();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('activeDevisTab') || 'informations';
@@ -165,6 +168,34 @@ const PageCreerDevisV2 = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (devisId) {
+      setIsEditing(true);
+      fetchDevis(devisId);
+    } else {
+      setIsEditing(false);
+      // Réinitialiser le devis si nécessaire pour une nouvelle création
+    }
+  }, [devisId]);
+
+  const fetchDevis = async (id) => {
+    try {
+      const devisDoc = await getDoc(doc(db, 'devis', id));
+      if (devisDoc.exists()) {
+        const devisData = devisDoc.data();
+        setDevis(devisData);
+        setImages(devisData.images || []); // Ajoutez cette ligne
+        setMainImageId(devisData.images?.find(img => img.isMain)?.id || null); // Et celle-ci
+        setDevisNumber(devisData.numeroDevis.split('-')[1]);
+      } else {
+        console.error("Devis non trouvé");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du devis:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -471,7 +502,7 @@ const PageCreerDevisV2 = () => {
         const newImage = {
           id: uuidv4(),
           url: imageUrl,
-          preview: URL.createObjectURL(file)
+          isMain: newImages.length === 0 && !mainImageId // Modifié ici
         };
         newImages.push(newImage);
         if (!mainImageId) {
@@ -538,23 +569,13 @@ const PageCreerDevisV2 = () => {
     try {
       validateDevis();
       
-      const newDevisNumber = await getNextDevisNumber();
-      setDevisNumber(newDevisNumber);
-      
       const currentUser = auth.currentUser;
       
       const calculatedDevis = calculateDevis(devis, parametres);
       
-      const newDevis = {
+      const devisToSave = {
         ...calculatedDevis,
-        numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`,
-        createdBy: currentUser ? currentUser.uid : null,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        status: 'brouillon',
-        version: 1,
-        currency: 'EUR',
-        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         images: images.map(img => ({ 
           id: img.id, 
           url: img.url, 
@@ -562,22 +583,46 @@ const PageCreerDevisV2 = () => {
         })),
       };
 
-      console.log("Devis à envoyer:", newDevis);
+      if (isEditing) {
+        // Mise à jour d'un devis existant
+        await updateDoc(doc(db, 'devis', devisId), devisToSave);
+        console.log("Devis mis à jour avec succès");
+        setAlertMessage('Devis mis à jour avec succès !');
+      } else {
+        // Création d'un nouveau devis
+        const newDevisNumber = await getNextDevisNumber();
+        setDevisNumber(newDevisNumber);
+        
+        const newDevis = {
+          ...devisToSave,
+          numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`,
+          createdBy: currentUser ? currentUser.uid : null,
+          createdAt: new Date().toISOString(),
+          status: 'brouillon',
+          version: 1,
+          currency: 'EUR',
+          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        };
 
-      const docRef = await addDoc(collection(db, 'devis'), newDevis);
-      console.log("Document written with ID: ", docRef.id);
-      setAlertMessage('Devis créé avec succès !');
+        const docRef = await addDoc(collection(db, 'devis'), newDevis);
+        console.log("Document written with ID: ", docRef.id);
+        setAlertMessage('Devis créé avec succès !');
+      }
+
       setAlertType('success');
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 5000);
+      
+      // Redirection vers la page des devis
+      navigate('/devis');
+      
     } catch (error) {
-      console.error("Erreur détaillée lors de la création du devis :", error);
-      setAlertMessage(`Une erreur est survenue lors de la création du devis : ${error.message}`);
+      console.error("Erreur détaillée lors de la création/modification du devis :", error);
+      setAlertMessage(`Une erreur est survenue : ${error.message}`);
       setAlertType('error');
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 5000);
     }
-  }, [devis, parametres, images, validateDevis, mainImageId]);
+  }, [devis, parametres, images, validateDevis, mainImageId, isEditing, devisId, navigate]);
 
   const tabs = [
     { id: 'informations', label: 'Informations et détails' },
@@ -791,6 +836,7 @@ const PageCreerDevisV2 = () => {
             tauxHoraires={tauxHoraires}
             handleRemiseChange={handleRemiseChange}
             handleSubmit={handleSubmit}
+            isEditing={isEditing}  // Passez l'état d'édition au composant ResumeDevis
           />
         ) : (
           <div>Chargement des données client...</div>
@@ -815,7 +861,7 @@ const PageCreerDevisV2 = () => {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} p-8`}>
       <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-teal-400 to-blue-500 text-transparent bg-clip-text">
-        {`Devis n° TGN-${(devisNumber || 1).toString().padStart(5, '0')}`}
+        {isEditing ? `Modifier le devis n° ${devis.numeroDevis}` : `Nouveau devis n° TGN-${(devisNumber || 1).toString().padStart(5, '0')}`}
       </h1>
       <div className="mb-6">
         <div className="flex border-b">

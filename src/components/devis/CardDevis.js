@@ -1,7 +1,7 @@
 import React from 'react';
 import { DocumentTextIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor }) => {
+const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor, onClick, onEdit }) => {
   // Trouver l'image principale
   const mainImage = devis.images && devis.images.find(img => img.isMain);
   const imageUrl = mainImage ? mainImage.url : null;
@@ -10,7 +10,10 @@ const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor 
   const montantTotal = devis.totalGeneral || devis.montantTotal || 0;
 
   return (
-    <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105`}>
+    <div 
+      className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer`}
+      onClick={onClick}
+    >
       {imageUrl && (
         <div className="w-full h-48 overflow-hidden">
           <img src={imageUrl} alt={`Devis ${devis.numeroDevis || ''}`} className="w-full h-full object-cover" />
@@ -50,10 +53,10 @@ const CardDevis = ({ devis, darkMode, formatDate, formatMontant, getStatusColor 
         )}
         <div className="flex justify-between items-center">
           <div className="flex space-x-2">
-            <button className="p-2 rounded-full bg-teal-100 text-teal-600 hover:bg-teal-200">
+            <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="p-2 rounded-full bg-teal-100 text-teal-600 hover:bg-teal-200">
               <EyeIcon className="h-5 w-5" />
             </button>
-            <button className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200">
               <PencilIcon className="h-5 w-5" />
             </button>
             <button className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200">

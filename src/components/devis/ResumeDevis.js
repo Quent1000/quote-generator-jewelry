@@ -15,7 +15,7 @@ import {
   calculerMarge
 } from '../../utils/devisUtils';
 
-const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit }) => {
+const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleInputChange, tauxHoraires, handleRemiseChange, handleSubmit, isEditing }) => {
   console.log("ResumeDevis props:", { devis, darkMode, clients, parametres, tauxHoraires });
 
   const formatPrix = useCallback((prix) => `${parseFloat(prix || 0).toFixed(2)} €`, []);
@@ -326,7 +326,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
               : 'bg-teal-500 text-white hover:bg-teal-600'
           }`}
         >
-          Créer le devis
+          {isEditing ? 'Mettre à jour le devis' : 'Créer le devis'}
         </button>
       </div>
     </div>

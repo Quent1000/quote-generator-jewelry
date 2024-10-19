@@ -41,6 +41,17 @@ const ImagesDevis = ({
     onDrop(validFiles);
   };
 
+  const handleRemoveImage = (id) => {
+    removeImage(id);
+    if (id === mainImageId && images.length > 1) {
+      // Si l'image principale est supprimée, définir la première image restante comme principale
+      const newMainImage = images.find(img => img.id !== id);
+      if (newMainImage) {
+        setMainImage(newMainImage.id);
+      }
+    }
+  };
+
   return (
     <div>
       <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -72,7 +83,7 @@ const ImagesDevis = ({
               className="w-full h-32 object-cover rounded-lg"
             />
             <button
-              onClick={() => removeImage(image.id)}
+              onClick={() => handleRemoveImage(image.id)}
               className={`${buttonClass} top-2 right-2 bg-red-500 text-white opacity-0 group-hover:opacity-100`}
             >
               <XMarkIcon className="h-4 w-4" />

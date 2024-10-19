@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { db } from '../firebase';
-import { collection, getDocs, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, getDoc, doc, updateDoc } from 'firebase/firestore';
 import CardDevis from '../components/devis/CardDevis';
+import DevisDetail from '../components/devis/DevisDetail';
+import { useNavigate } from 'react-router-dom';
 
 const PageDevis = () => {
   const { darkMode } = useAppContext();
   const [devis, setDevis] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDevis, setSelectedDevis] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDevis = async () => {
@@ -97,6 +101,72 @@ const PageDevis = () => {
     return `${parseFloat(montant).toFixed(2)} €`;
   };
 
+  const handleDevisClick = async (devisId) => {
+    setIsLoading(true);
+    try {
+      const devisDoc = await getDoc(doc(db, 'devis', devisId));
+      if (devisDoc.exists()) {
+        const devisData = devisDoc.data();
+        let clientInfo = { nom: 'Non défini', entreprise: 'Non définie' };
+        
+        if (devisData.client) {
+          const clientDoc = await getDoc(doc(db, 'clients', devisData.client));
+          if (clientDoc.exists()) {
+            const clientData = clientDoc.data();
+            clientInfo = {
+              nom: `${clientData.informationsPersonnelles.prenom} ${clientData.informationsPersonnelles.nom}`,
+              entreprise: clientData.entrepriseId ? 'À récupérer' : 'Particulier'
+            };
+            
+            if (clientData.entrepriseId) {
+              const entrepriseDoc = await getDoc(doc(db, 'entreprises', clientData.entrepriseId));
+              if (entrepriseDoc.exists()) {
+                clientInfo.entreprise = entrepriseDoc.data().nom;
+              }
+            }
+          }
+        }
+        
+        setSelectedDevis({ id: devisDoc.id, ...devisData, clientInfo });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des détails du devis:", error);
+    }
+    setIsLoading(false);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedDevis(null);
+  };
+
+  const handleUpdateMainImage = async (devisId, imageId) => {
+    try {
+      const devisRef = doc(db, 'devis', devisId);
+      const devisDoc = await getDoc(devisRef);
+      if (devisDoc.exists()) {
+        const devisData = devisDoc.data();
+        const updatedImages = devisData.images.map(img => ({
+          ...img,
+          isMain: img.id === imageId
+        }));
+        
+        await updateDoc(devisRef, { images: updatedImages });
+        
+        // Mettre à jour l'état local
+        setSelectedDevis(prevDevis => ({
+          ...prevDevis,
+          images: updatedImages
+        }));
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'image principale:", error);
+    }
+  };
+
+  const handleEditDevis = (devisId) => {
+    navigate(`/modifier-devis/${devisId}`);
+  };
+
   return (
     <div className={`min-h-screen p-8 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <h1 className="text-3xl font-bold mb-8">Liste des devis</h1>
@@ -104,21 +174,31 @@ const PageDevis = () => {
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500"></div>
         </div>
-      ) : devis.length === 0 ? (
-        <p>Aucun devis trouvé.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {devis.map((devis) => (
-            <CardDevis
-              key={devis.id}
-              devis={devis}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {devis.map((devis) => (
+              <CardDevis
+                key={devis.id}
+                devis={devis}
+                darkMode={darkMode}
+                formatDate={formatDate}
+                formatMontant={formatMontant}
+                getStatusColor={getStatusColor}
+                onClick={() => handleDevisClick(devis.id)}
+                onEdit={() => handleEditDevis(devis.id)}
+              />
+            ))}
+          </div>
+          {selectedDevis && (
+            <DevisDetail 
+              devis={selectedDevis} 
+              onClose={handleCloseDetail}
               darkMode={darkMode}
-              formatDate={formatDate}
-              formatMontant={formatMontant}
-              getStatusColor={getStatusColor}
+              onUpdateMainImage={handleUpdateMainImage}
             />
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
