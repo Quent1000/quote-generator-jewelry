@@ -35,7 +35,6 @@ const PageDevis = () => {
         const devisRef = collection(db, 'devis');
         const q = query(devisRef, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
-        console.log("Nombre de devis récupérés:", querySnapshot.docs.length);
         
         const devisData = await Promise.all(querySnapshot.docs.map(async (devisDoc) => {
           const data = devisDoc.data();
@@ -59,15 +58,32 @@ const PageDevis = () => {
             }
           }
           
+          // Récupérer les informations de l'utilisateur qui a créé le devis
+          let createdByUser = data.createdByUser || { prenom: 'Non spécifié', nom: 'Non spécifié' };
+          if (data.createdBy && (!data.createdByUser || !data.createdByUser.prenom || !data.createdByUser.nom)) {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', data.createdBy));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                createdByUser = {
+                  prenom: userData.firstName || userData.prenom || 'Non spécifié',
+                  nom: userData.lastName || userData.nom || 'Non spécifié'
+                };
+              }
+            } catch (error) {
+              console.error("Erreur lors de la récupération des données de l'utilisateur créateur:", error);
+            }
+          }
+          
           return {
             id: devisDoc.id,
             ...data,
             totalGeneral: data.totalGeneral || data.montantTotal || 0,
-            clientInfo: clientInfo
+            clientInfo: clientInfo,
+            createdByUser: createdByUser
           };
         }));
         
-        console.log("Devis traités:", devisData);
         setDevis(devisData);
         setIsLoading(false);
       } catch (error) {
@@ -203,10 +219,18 @@ const PageDevis = () => {
         
         await updateDoc(devisRef, { images: updatedImages });
         
-        // Mettre à jour l'état local
-        setSelectedDevis(prevDevis => ({
-          ...prevDevis,
-          images: updatedImages
+        // Mettre à jour l'état local du composant parent
+        setDevis(prevDevis => prevDevis.map(d => {
+          if (d.id === devisId) {
+            return {
+              ...d,
+              images: d.images.map(img => ({
+                ...img,
+                isMain: img.id === imageId
+              }))
+            };
+          }
+          return d;
         }));
       }
     } catch (error) {
@@ -235,6 +259,12 @@ const PageDevis = () => {
     }
     setShowDeleteConfirmation(false);
     setDevisToDelete(null);
+  };
+
+  const handleUpdateDevis = (updatedDevis) => {
+    setSelectedDevis(updatedDevis);
+    // Mettre à jour la liste des devis si nécessaire
+    setDevis(prevDevis => prevDevis.map(d => d.id === updatedDevis.id ? updatedDevis : d));
   };
 
   return (
@@ -321,6 +351,7 @@ const PageDevis = () => {
               onClose={handleCloseDetail}
               darkMode={darkMode}
               onUpdateMainImage={handleUpdateMainImage}
+              onUpdateDevis={handleUpdateDevis}
             />
           )}
           {showDeleteConfirmation && (

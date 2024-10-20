@@ -217,7 +217,7 @@ const PageCreerDevisV2 = () => {
         const parametresDoc = await getDoc(doc(db, 'parametresDevis', 'default'));
         if (parametresDoc.exists()) {
           const parametresData = parametresDoc.data();
-          console.log("Métaux récupérés:", parametresData.prixMetaux);
+          console.log("Métaux r��cupérés:", parametresData.prixMetaux);
           setMetaux(Object.entries(parametresData.prixMetaux || {}).map(([nom, prix]) => ({ nom, prix })));
           setParametres(parametresData);
           setStylesGravure(parametresData.stylesGravure || []);
@@ -574,19 +574,33 @@ const PageCreerDevisV2 = () => {
       validateDevis();
       
       const currentUser = auth.currentUser;
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const userData = userDoc.data();
+      if (!currentUser) {
+        throw new Error("Utilisateur non authentifié");
+      }
+
+      let userData = { prenom: 'Non spécifié', nom: 'Non spécifié' };
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          userData = userDoc.data();
+        } else {
+          console.warn("Document utilisateur non trouvé");
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données utilisateur:", error);
+      }
       
       const calculatedDevis = calculateDevis(devis, parametres);
       
       const devisToSave = {
         ...calculatedDevis,
         updatedAt: new Date().toISOString(),
+        createdBy: currentUser.uid,
         createdByUser: {
-          prenom: userData.prenom,
-          nom: userData.nom
+          prenom: userData.firstName || userData.prenom || 'Non spécifié',
+          nom: userData.lastName || userData.nom || 'Non spécifié'
         },
-        createdAt: isEditing ? devis.createdAt : new Date().toISOString(), // Garder la date originale si en mode édition
+        createdAt: isEditing ? devis.createdAt : new Date().toISOString(),
         images: images.map(img => ({ 
           id: img.id, 
           url: img.url, 
@@ -607,8 +621,7 @@ const PageCreerDevisV2 = () => {
         const newDevis = {
           ...devisToSave,
           numeroDevis: `TGN-${newDevisNumber.toString().padStart(5, '0')}`,
-          createdBy: currentUser ? currentUser.uid : null,
-          createdAt: new Date().toISOString(),
+          createdBy: currentUser.uid,
           status: 'brouillon',
           version: 1,
           currency: 'EUR',

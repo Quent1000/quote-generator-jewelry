@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { XMarkIcon, ChevronDownIcon, ChevronUpIcon, StarIcon, DocumentIcon } from '@heroicons/react/24/outline';
 import { PDFViewer, Document, Page, Text, View, StyleSheet, Image as PDFImage, Font } from '@react-pdf/renderer';
 import logoTGN409 from '../../assets/logo-tgn409.png';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 // Supprimez ces lignes
 // import RobotoRegular from '../../assets/fonts/Roboto-Regular.ttf';
@@ -16,7 +18,8 @@ Font.register({
   ]
 });
 
-const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
+const DevisDetail = ({ devis: initialDevis, onClose, darkMode, onUpdateMainImage, onUpdateDevis }) => {
+  const [devis, setDevis] = useState(initialDevis);
   const [expandedSections, setExpandedSections] = useState({
     informations: true,
     details: true,
@@ -66,8 +69,29 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
     setSelectedImage(null);
   };
 
-  const handleSetMainImage = (imageId) => {
-    onUpdateMainImage(devis.id, imageId);
+  const handleUpdateMainImage = async (imageId) => {
+    try {
+      const updatedImages = devis.images.map(img => ({
+        ...img,
+        isMain: img.id === imageId
+      }));
+      
+      // Mettre à jour l'état local immédiatement
+      setDevis(prevDevis => ({
+        ...prevDevis,
+        images: updatedImages
+      }));
+
+      // Mettre à jour dans Firebase
+      await updateDoc(doc(db, 'devis', devis.id), { images: updatedImages });
+      
+      // Appeler la fonction de mise à jour du parent si elle existe
+      if (onUpdateMainImage) {
+        onUpdateMainImage(devis.id, imageId);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'image principale:", error);
+    }
   };
 
   const handleGeneratePdf = () => {
@@ -149,12 +173,38 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
   });
 
   const serviceNames = {
-    administratif: "ADMINISTRATIF",
+    administratif: "Administratif",
     cao: "CAO",
-    bijouterie: "BIJOUTERIE",
-    joaillerie: "JOAILLERIE",
-    dessertissage: "DESSERTISSAGE",
-    design: "DESIGN"
+    bijouterie: "Bijouterie",
+    joaillerie: "Joaillerie",
+    dessertissage: "Dessertissage",
+    design: "Design"
+  };
+
+  const predefinedTags = ["Urgent", "Complexe", "A vérifier", "VIP"];
+
+  const handleTagToggle = async (tag) => {
+    const updatedTags = devis.tags?.includes(tag)
+      ? devis.tags.filter(t => t !== tag)
+      : [...(devis.tags || []), tag];
+
+    // Mettre à jour l'état local immédiatement
+    setDevis(prevDevis => ({
+      ...prevDevis,
+      tags: updatedTags
+    }));
+
+    try {
+      await updateDoc(doc(db, 'devis', devis.id), { tags: updatedTags });
+      // Pas besoin d'appeler onUpdateDevis ici car nous avons déjà mis à jour l'état local
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des tags:", error);
+      // En cas d'erreur, revertir le changement local
+      setDevis(prevDevis => ({
+        ...prevDevis,
+        tags: devis.tags
+      }));
+    }
   };
 
   // Composant PDF
@@ -250,9 +300,9 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
                 <Text key={key}>{serviceNames[key] || key.toUpperCase()}: {value.heures}h {value.minutes}min</Text>
               ) : null
             ))}
-            {devis.tarifFonte && <Text>FONTE</Text>}
-            {devis.tarifImpressionCire && <Text>IMPRESSION CIRE</Text>}
-            {devis.tarifImpressionResine && <Text>IMPRESSION RÉSINE</Text>}
+            {devis.tarifFonte && <Text>Fonte métal</Text>}
+            {devis.tarifImpressionCire && <Text>Impression cire</Text>}
+            {devis.tarifImpressionResine && <Text>Impression résine</Text>}
           </View>
           
           <View style={styles.section}>
@@ -272,14 +322,12 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
             Si le montant est trop important il sera demandé le règlement par avance. Le client en sera averti avant toute exécution.
             Acompte obligatoire réalisé par virement uniquement sur le compte de TGN 409 dont les informations bancaires sont signifiées en bas de page.
             Une facture avec règlement à réception sera émise lors de la livraison de la commande. Dans le cas d'une nouvelle relation commerciale, il sera demandé un règlement avant envoi.
-
             Pour une commande dont la prestation de fabrication est inférieure à 150,00 Euros HT, TGN 409 s'autorise le droit d'ajouter des frais de gestion de dossier de 70,00 Euros HT.
-
             TGN 409 ne peut être tenue pour responsable en cas de casse de pierres clients durant l'opération de dessertissage, ni même s'il est constaté après dessertissage que des problèmes sur les pierres étaient non apparents du fait d'être cachés sous le métal qui les maintenait.
           </Text>
           
           <Text style={styles.footer}>
-            TGN 409 - SIRET: XXXXXXXXX - TVA: FRXXXXXXXXX
+            TGN 409 - SIRET: 49233731600011 - TVA: FR41492337316
           </Text>
         </Page>
       </Document>
@@ -297,7 +345,7 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
             onClick={() => handleImageClick(image)}
           />
           <button
-            onClick={() => handleSetMainImage(image.id)}
+            onClick={() => handleUpdateMainImage(image.id)}
             className="absolute top-2 right-2 bg-white dark:bg-gray-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <StarIcon className={`h-5 w-5 ${image.isMain ? 'text-yellow-500' : 'text-gray-500'}`} />
@@ -359,6 +407,17 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
     );
   };
 
+  // Si setMainImage n'est pas utilisée, supprimez cette ligne
+  // const setMainImage = (imageId) => {
+  //   handleUpdateMainImage(imageId);
+  // };
+
+  // Si vous prévoyez d'utiliser setMainImage dans le futur, utilisez ce commentaire :
+  // eslint-disable-next-line no-unused-vars
+  const setMainImage = (imageId) => {
+    handleUpdateMainImage(imageId);
+  };
+
   return (
     <div className={`fixed inset-0 z-50 overflow-y-auto ${darkMode ? 'bg-gray-900 bg-opacity-75' : 'bg-gray-100 bg-opacity-75'}`}>
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -370,12 +429,27 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
           <h2 className="text-2xl font-bold mb-6">Détails du devis {devis.numeroDevis}</h2>
           
           {devis.images && devis.images.length > 0 && devis.images.find(img => img.isMain) && (
-            <div className="mb-6 cursor-pointer" onClick={() => handleImageClick(devis.images.find(img => img.isMain))}>
+            <div className="mb-6">
               <img 
                 src={devis.images.find(img => img.isMain).url} 
                 alt={`Devis ${devis.numeroDevis}`}
-                className="w-full h-64 object-cover rounded-lg"
+                className="w-full h-64 object-cover rounded-lg mb-2"
               />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {predefinedTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => handleTagToggle(tag)}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      devis.tags?.includes(tag)
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           
@@ -386,10 +460,13 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
                 <InfoItem label="Date de création" value={devis.createdAt ? new Date(devis.createdAt).toLocaleDateString() : 'Non définie'} />
                 <InfoItem label="Statut" value={devis.status} />
                 <InfoItem label="Titre du devis" value={devis.titreDevis} />
-                {/* Ajout de l'information sur le créateur du devis */}
                 <InfoItem 
                   label="Créé par" 
-                  value={devis.createdByUser ? `${devis.createdByUser.prenom} ${devis.createdByUser.nom}` : 'Non spécifié'} 
+                  value={
+                    devis.createdByUser 
+                      ? `${devis.createdByUser.prenom || ''} ${devis.createdByUser.nom || ''}`.trim() || 'Non spécifié'
+                      : 'Non spécifié'
+                  } 
                 />
               </Section>
               
@@ -464,16 +541,6 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
             <InfoItem label="Remise" value={devis.remise ? `${devis.remise.valeur} ${devis.remise.type === 'pourcentage' ? '%' : '€'}` : 'Aucune'} />
             <InfoItem label="Marge totale" value={devis.marge ? `${devis.marge.toFixed(2)} €` : 'Non définie'} />
           </Section>
-          
-          {devis.tags && devis.tags.length > 0 && (
-            <Section title="Tags" id="tags">
-              <div className="flex flex-wrap gap-2">
-                {devis.tags.map((tag, index) => (
-                  <span key={index} className="bg-teal-100 text-teal-800 px-2 py-1 rounded-full text-sm">{tag}</span>
-                ))}
-              </div>
-            </Section>
-          )}
           
           <Section title="Images" id="images">
             {renderImages()}
