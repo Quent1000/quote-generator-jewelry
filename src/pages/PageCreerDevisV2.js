@@ -725,7 +725,7 @@ const PageCreerDevisV2 = () => {
           disabled={isFirstTab}
         >
           <ChevronLeftIcon className="w-5 h-5 inline-block mr-2" />
-          Préc��dent
+          Précdent
         </button>
         {!isLastTab && (
           <button

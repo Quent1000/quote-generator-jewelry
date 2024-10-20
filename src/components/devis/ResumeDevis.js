@@ -197,7 +197,7 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
             <h4 className="font-semibold mt-4">Autres pierres</h4>
             {devis.autresPierres.map((pierre, index) => (
               <div key={index} className="text-sm">
-                {`${pierre.forme} ${pierre.type} | Qté: ${pierre.qte} | Taille: ${pierre.dimension} | ${pierre.sertissage}`}
+                {`${pierre.forme} ${pierre.type} | Qté: ${pierre.qte} | Taille: ${pierre.dimension || pierre.taille} | ${pierre.sertissage}`}
               </div>
             ))}
             <InfoItem label="Total autres pierres" value={formatPrix(calculerTotalAutresPierres(devis, parametres))} />

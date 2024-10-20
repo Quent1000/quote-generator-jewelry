@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon, ChevronDownIcon, ChevronUpIcon, StarIcon, DocumentIcon } from '@heroicons/react/24/outline';
-import { PDFViewer, Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
+import { PDFViewer, Document, Page, Text, View, StyleSheet, Image as PDFImage, Font } from '@react-pdf/renderer';
 import logoTGN409 from '../../assets/logo-tgn409.png';
 
 // Supprimez ces lignes
@@ -59,7 +59,7 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
   );
 
   const handleImageClick = (image) => {
-    setSelectedImage(image);
+    setSelectedImage(image); // Assurez-vous que cette ligne est présente
   };
 
   const handleCloseImage = () => {
@@ -132,69 +132,159 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
       marginTop: 20,
       textAlign: 'justify',
     },
+    subtitle: {
+      fontSize: 14,
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    mainImageContainer: {
+      alignItems: 'center',
+      marginVertical: 10,
+    },
+    mainImage: {
+      width: 200,
+      height: 200,
+      objectFit: 'contain',
+    },
   });
 
+  const serviceNames = {
+    administratif: "ADMINISTRATIF",
+    cao: "CAO",
+    bijouterie: "BIJOUTERIE",
+    joaillerie: "JOAILLERIE",
+    dessertissage: "DESSERTISSAGE",
+    design: "DESIGN"
+  };
+
   // Composant PDF
-  const DevisPDF = ({ devis }) => (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Image style={styles.logo} src={logoTGN409} />
-          <View style={styles.companyInfo}>
-            <Text>TGN 409</Text>
-            <Text>21 montée des soldats</Text>
-            <Text>69300 Caluire et cuire</Text>
-          </View>
-        </View>
-        
-        <Text style={styles.title}>Devis n° {devis.numeroDevis}</Text>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Client</Text>
-          <Text>{devis.clientInfo.nom}</Text>
-          <Text>{devis.clientInfo.entreprise}</Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Détails du produit</Text>
-          <View style={styles.row}>
-            <Text>Catégorie:</Text>
-            <Text>{devis.categorie}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text>Métal:</Text>
-            <Text>{devis.metal}</Text>
-          </View>
-          {/* Ajoutez d'autres détails du produit ici */}
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Totaux</Text>
-          <View style={styles.row}>
-            <Text>Montant total:</Text>
-            <Text>{formatMontant(devis.totalGeneral)}</Text>
-          </View>
-          {/* Ajoutez d'autres totaux ici */}
-        </View>
-        
-        <Text style={styles.legalText}>
-          La fabrication d'un bijou exige environ 50% de son poids métal en plus, dont l'excédent métal hors pertes reste la propriété du client.
-          L'approvisionnement métal ne peut se faire qu'en métal fin, à partir d'un compte officiel qui sera alimenté par le client.
-          Si le montant est trop important il sera demandé le règlement par avance. Le client en sera averti avant toute exécution.
-          Acompte obligatoire réalisé par virement uniquement sur le compte de TGN 409 dont les informations bancaires sont signifiées en bas de page.
-          Une facture avec règlement à réception sera émise lors de la livraison de la commande. Dans le cas d'une nouvelle relation commerciale, il sera demandé un règlement avant envoi.
+  const DevisPDF = ({ devis }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const mainImage = devis.images && devis.images.find(img => img.isMain);
 
-          Pour une commande dont la prestation de fabrication est inférieure à 150,00 Euros HT, TGN 409 s'autorise le droit d'ajouter des frais de gestion de dossier de 70,00 Euros HT.
+    useEffect(() => {
+      if (mainImage && mainImage.url) {
+        const img = new Image();
+        img.onload = () => setImageLoaded(true);
+        img.onerror = (error) => {
+          console.error("Erreur de chargement de l'image:", error);
+          setImageLoaded(true); // Considérez l'image comme chargée même en cas d'erreur
+        };
+        img.src = mainImage.url;
+      }
+    }, [mainImage]);
 
-          TGN 409 ne peut être tenue pour responsable en cas de casse de pierres clients durant l'opération de dessertissage, ni même s'il est constaté après dessertissage que des problèmes sur les pierres étaient non apparents du fait d'être cachés sous le métal qui les maintenait.
-        </Text>
-        
-        <Text style={styles.footer}>
-          TGN 409 - SIRET: XXXXXXXXX - TVA: FRXXXXXXXXX
-        </Text>
-      </Page>
-    </Document>
-  );
+    return (
+      <Document>
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <PDFImage style={styles.logo} src={logoTGN409} />
+            <View style={styles.companyInfo}>
+              <Text>TGN 409</Text>
+              <Text>21 montée des soldats</Text>
+              <Text>69300 Caluire et cuire</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.title}>Devis n° {devis.numeroDevis}</Text>
+          <Text style={styles.subtitle}>{devis.titreDevis}</Text>
+          
+          {imageLoaded && mainImage && mainImage.url && (
+            <View style={styles.mainImageContainer}>
+              <PDFImage
+                source={{ uri: mainImage.url }}
+                style={styles.mainImage}
+              />
+            </View>
+          )}
+          
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Informations client</Text>
+            <Text>{devis.clientInfo.nom}</Text>
+            {devis.clientInfo.entreprise !== 'Particulier' && (
+              <>
+                <Text>{devis.clientInfo.entreprise}</Text>
+                <Text>SIRET : {devis.clientInfo.siret || 'Non spécifié'}</Text>
+                <Text>{devis.clientInfo.adresse || 'Adresse non spécifiée'}</Text>
+              </>
+            )}
+            <Text>Tél : {devis.clientInfo.telephone || 'Non spécifié'}</Text>
+            <Text>Email : {devis.clientInfo.email || 'Non spécifié'}</Text>
+          </View>
+          
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Détails du produit</Text>
+            <Text>Catégorie: {devis.categorie}</Text>
+            <Text>Sous-catégorie: {devis.sousCategorie}</Text>
+            <Text>Métal: {devis.metal}</Text>
+            <Text>Taille: {devis.taille}</Text>
+            <Text>Poids estimé: {devis.poidsEstime} g</Text>
+          </View>
+          
+          {devis.diamants && devis.diamants.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Diamants</Text>
+              {devis.diamants.map((diamant, index) => (
+                <Text key={index}>
+                  {diamant.taille}mm - Quantité: {diamant.qte} - Qualité: {diamant.qualite}
+                </Text>
+              ))}
+            </View>
+          )}
+          
+          {devis.autresPierres && devis.autresPierres.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Autres pierres</Text>
+              {devis.autresPierres.map((pierre, index) => (
+                <Text key={index}>
+                  {pierre.type} - Forme: {pierre.forme} - Taille: {pierre.dimension || pierre.taille} - Quantité: {pierre.qte}
+                </Text>
+              ))}
+            </View>
+          )}
+          
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prestations proposées</Text>
+            {Object.entries(devis.tempsProduction).map(([key, value]) => (
+              value.heures > 0 || value.minutes > 0 ? (
+                <Text key={key}>{serviceNames[key] || key.toUpperCase()}: {value.heures}h {value.minutes}min</Text>
+              ) : null
+            ))}
+            {devis.tarifFonte && <Text>FONTE</Text>}
+            {devis.tarifImpressionCire && <Text>IMPRESSION CIRE</Text>}
+            {devis.tarifImpressionResine && <Text>IMPRESSION RÉSINE</Text>}
+          </View>
+          
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Livraison</Text>
+            <Text>Méthode: {devis.typeLivraison}</Text>
+            <Text>Prix: {formatMontant(devis.prixLivraison)}</Text>
+          </View>
+          
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Totaux</Text>
+            <Text>Montant total: {formatMontant(devis.totalGeneral)}</Text>
+          </View>
+          
+          <Text style={styles.legalText}>
+            La fabrication d'un bijou exige environ 50% de son poids métal en plus, dont l'excédent métal hors pertes reste la propriété du client.
+            L'approvisionnement métal ne peut se faire qu'en métal fin, à partir d'un compte officiel qui sera alimenté par le client.
+            Si le montant est trop important il sera demandé le règlement par avance. Le client en sera averti avant toute exécution.
+            Acompte obligatoire réalisé par virement uniquement sur le compte de TGN 409 dont les informations bancaires sont signifiées en bas de page.
+            Une facture avec règlement à réception sera émise lors de la livraison de la commande. Dans le cas d'une nouvelle relation commerciale, il sera demandé un règlement avant envoi.
+
+            Pour une commande dont la prestation de fabrication est inférieure à 150,00 Euros HT, TGN 409 s'autorise le droit d'ajouter des frais de gestion de dossier de 70,00 Euros HT.
+
+            TGN 409 ne peut être tenue pour responsable en cas de casse de pierres clients durant l'opération de dessertissage, ni même s'il est constaté après dessertissage que des problèmes sur les pierres étaient non apparents du fait d'être cachés sous le métal qui les maintenait.
+          </Text>
+          
+          <Text style={styles.footer}>
+            TGN 409 - SIRET: XXXXXXXXX - TVA: FRXXXXXXXXX
+          </Text>
+        </Page>
+      </Document>
+    );
+  };
 
   const renderImages = () => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -239,7 +329,7 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
           <div key={index} className="mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
             <InfoItem label="Forme" value={pierre.forme} />
             <InfoItem label="Type" value={pierre.type} />
-            <InfoItem label="Taille" value={pierre.taille} />
+            <InfoItem label="Taille" value={pierre.dimension || pierre.taille} />
             <InfoItem label="Quantité" value={pierre.qte} />
             <InfoItem label="Fourni par" value={pierre.fourniPar} />
             <InfoItem label="Sertissage" value={pierre.sertissage} />
@@ -336,7 +426,7 @@ const DevisDetail = ({ devis, onClose, darkMode, onUpdateMainImage }) => {
               
               <Section title="Temps de production" id="tempsProduction">
                 {Object.entries(devis.tempsProduction).map(([key, value]) => (
-                  <InfoItem key={key} label={key} value={`${value.heures}h ${value.minutes}min`} />
+                  <InfoItem key={key} label={serviceNames[key] || key} value={`${value.heures}h ${value.minutes}min`} />
                 ))}
               </Section>
               

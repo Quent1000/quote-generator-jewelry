@@ -161,13 +161,18 @@ const PageDevis = () => {
             const clientData = clientDoc.data();
             clientInfo = {
               nom: `${clientData.informationsPersonnelles.prenom} ${clientData.informationsPersonnelles.nom}`,
-              entreprise: clientData.entrepriseId ? 'À récupérer' : 'Particulier'
+              telephone: clientData.informationsPersonnelles.telephone,
+              email: clientData.informationsPersonnelles.email,
+              entreprise: 'Particulier'
             };
             
             if (clientData.entrepriseId) {
               const entrepriseDoc = await getDoc(doc(db, 'entreprises', clientData.entrepriseId));
               if (entrepriseDoc.exists()) {
-                clientInfo.entreprise = entrepriseDoc.data().nom;
+                const entrepriseData = entrepriseDoc.data();
+                clientInfo.entreprise = entrepriseData.nom;
+                clientInfo.adresse = entrepriseData.adresse;
+                clientInfo.siret = entrepriseData.siret;
               }
             }
           }

@@ -1,5 +1,5 @@
 // Fonction pour appliquer une marge
-const appliquerMarge = (montant, marge) => montant * (1 + marge / 100);
+export const appliquerMarge = (montant, marge) => montant * (1 + marge / 100);
 
 export const calculerTotalMetal = (devis, parametres) => {
   if (devis.metal && devis.poidsEstime) {
