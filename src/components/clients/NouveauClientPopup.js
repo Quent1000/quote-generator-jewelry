@@ -241,7 +241,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
         throw error;
       }
     }
-    return null;
+    return formData.entreprise.logo;
   };
 
   const formatWebsite = (url) => {

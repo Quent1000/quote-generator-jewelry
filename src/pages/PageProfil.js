@@ -51,6 +51,7 @@ const PageProfil = () => {
         const downloadURL = await getDownloadURL(storageRef);
         setPhotoURL(downloadURL);
       } catch (error) {
+        console.error("Erreur lors du téléchargement de la photo:", error);
         setMessage("Erreur lors du téléchargement de la photo.");
       }
     }

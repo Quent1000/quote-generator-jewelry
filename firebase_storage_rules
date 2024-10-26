@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fonction pour vérifier si l'utilisateur est un administrateur
+    function isAdmin() {
+      return isAuthenticated() &&
+             get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Fonction pour vérifier si l'origine est autorisée
+    function isAllowedOrigin() {
+      return request.origin == null ||  // Permettre l'accès depuis l'application mobile ou desktop
+             request.origin == 'http://localhost:3000' ||
+             request.origin == 'https://quote-generator-jewelry.vercel.app';
+    }
+
+    // Règle générale pour tous les fichiers
+    match /{allPaths=**} {
+      allow read: if isAuthenticated() && isAllowedOrigin();
+    }
+    
+    // Règle pour les images de devis
+    match /devis_images/{imageId} {
+      allow read, write: if isAuthenticated() && isAllowedOrigin();
+    }
+
+    // Règle pour les logos d'entreprise
+    match /logos/{logoId} {
+      allow read, write: if isAuthenticated() && isAllowedOrigin();
+    }
+
+    // Règle pour les photos de profil
+    match /profile_photos/{userId} {
+      allow read: if isAuthenticated() && isAllowedOrigin();
+      allow write: if request.auth.uid == userId && isAllowedOrigin();
+    }
+  }
+}
