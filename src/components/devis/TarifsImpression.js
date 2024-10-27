@@ -14,39 +14,52 @@ const TarifsImpression = ({ devis, handleInputChange, darkMode, parametres }) =>
   );
 
   const renderTarifSelect = (field, options) => (
-    <CustomSelect
-      options={[
-        { value: '', label: 'Sélectionnez un tarif' },
-        ...Object.entries(options).map(([key, value]) => ({ 
-          value: value.toString(), 
-          label: `${key} - ${value}€` 
-        })),
-        { value: 'custom', label: 'Tarif personnalisé' }
-      ]}
-      value={devis[field] || ''}
-      onChange={(value) => {
-        if (value === 'custom') {
-          handleInputChange(field, 'custom');
-        } else {
-          handleInputChange(field, value);
-        }
-      }}
-      className={inputClass}
-      darkMode={darkMode}
-    />
+    <div className="flex space-x-2">
+      <CustomSelect
+        options={[
+          { value: '', label: 'Sélectionnez un tarif' },
+          ...Object.entries(options).map(([key, value]) => ({ 
+            value: value.toString(), 
+            label: `${key} - ${value}€` 
+          })),
+          { value: 'custom', label: 'Tarif personnalisé' }
+        ]}
+        value={devis[field] || ''}
+        onChange={(value) => {
+          if (value === 'custom') {
+            handleInputChange(field, 'custom');
+          } else {
+            handleInputChange(field, value);
+          }
+        }}
+        className={`${inputClass} flex-grow`}
+        darkMode={darkMode}
+      />
+      <input
+        type="number"
+        value={devis[`${field}Quantite`] || 1}
+        onChange={(e) => handleInputChange(`${field}Quantite`, parseInt(e.target.value) || 1)}
+        className={`${inputClass} w-20`}
+        min="1"
+        placeholder="Qté"
+      />
+    </div>
   );
 
   const calculerTotal = () => {
     let total = 0;
     
     // Tarif fonte
-    total += devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
+    const tarifFonte = devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
+    total += tarifFonte * (devis.tarifFonteQuantite || 1);
     
     // Tarif impression cire
-    total += devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
+    const tarifImpressionCire = devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
+    total += tarifImpressionCire * (devis.tarifImpressionCireQuantite || 1);
     
     // Tarif impression résine
-    total += devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+    const tarifImpressionResine = devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+    total += tarifImpressionResine * (devis.tarifImpressionResineQuantite || 1);
     
     return total;
   };

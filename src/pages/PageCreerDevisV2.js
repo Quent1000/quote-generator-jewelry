@@ -70,16 +70,19 @@ const PageCreerDevisV2 = () => {
       prixSertissage: 0
     }],
     tempsProduction: {
-      administratif: { heures: 0, minutes: 0 },
+      administratif: { heures: 0, minutes: 20 }, // Modifié ici
       cao: { heures: 0, minutes: 0 },
       bijouterie: { heures: 0, minutes: 0 },
-      joaillerie: { heures: 0, minutes: 0 }, // Changé de polissage à joaillerie
+      joaillerie: { heures: 0, minutes: 0 },
       dessertissage: { heures: 0, minutes: 0 },
       design: { heures: 0, minutes: 0 },
     },
     tarifFonte: '',
+    tarifFonteQuantite: 1,
     tarifImpressionCire: '',
+    tarifImpressionCireQuantite: 1,
     tarifImpressionResine: '',
+    tarifImpressionResineQuantite: 1,
     typeLivraison: '',
     prixLivraison: 0,
     remise: { type: 'pourcentage', valeur: 0 },
@@ -96,6 +99,8 @@ const PageCreerDevisV2 = () => {
     paymentTerms: '', // Conditions de paiement
     internalNotes: '', // Notes internes
     images: [], // Assurez-vous que c'est initialisé comme un tableau vide
+    referenceClient: '', // Ajoutez ce champ
+    operation: '', // Ajoutez ce champ
   });
 
 
@@ -217,7 +222,7 @@ const PageCreerDevisV2 = () => {
         const parametresDoc = await getDoc(doc(db, 'parametresDevis', 'default'));
         if (parametresDoc.exists()) {
           const parametresData = parametresDoc.data();
-          console.log("Métaux r��cupérés:", parametresData.prixMetaux);
+          console.log("Métaux rcupérés:", parametresData.prixMetaux);
           setMetaux(Object.entries(parametresData.prixMetaux || {}).map(([nom, prix]) => ({ nom, prix })));
           setParametres(parametresData);
           setStylesGravure(parametresData.stylesGravure || []);
@@ -594,6 +599,9 @@ const PageCreerDevisV2 = () => {
       
       const devisToSave = {
         ...calculatedDevis,
+        referenceClient: devis.referenceClient,
+        paymentTerms: devis.paymentTerms,
+        operation: devis.operation, // Assurez-vous d'inclure l'opération
         updatedAt: new Date().toISOString(),
         createdBy: currentUser.uid,
         createdByUser: {

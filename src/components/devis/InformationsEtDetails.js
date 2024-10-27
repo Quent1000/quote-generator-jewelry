@@ -90,6 +90,20 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
     handleInputChange('tags', devis.tags.filter(tag => tag !== tagToRemove));
   };
 
+  const conditionsPaiementOptions = [
+    { value: '30-70', label: '30% à la commande, 70% à la livraison' },
+    { value: '50-50', label: '50% à la commande, 50% à la livraison' },
+    { value: '100', label: '100% à la livraison' },
+  ];
+
+  const operationsOptions = [
+    { value: 'developpement_cao', label: 'Développement CAO' },
+    { value: 'cao_impression_cire', label: 'CAO + impression cire' },
+    { value: 'fabrication_complete', label: 'Fabrication complète' },
+    { value: 'sav_modification', label: 'SAV / modification' },
+    { value: 'cao_impression_plastique', label: 'CAO + impression plastique' },
+  ];
+
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Informations et détails</h2>
@@ -192,6 +206,38 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
         ))}
       </div>
 
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        {renderOption("Référence client", (
+          <input
+            type="text"
+            value={devis.referenceClient || ''}
+            onChange={(e) => handleInputChange('referenceClient', e.target.value)}
+            className={inputClass}
+            placeholder="Référence client"
+          />
+        ))}
+        {renderOption("Conditions de paiement", (
+          <CustomSelect
+            options={conditionsPaiementOptions}
+            value={devis.paymentTerms}
+            onChange={(value) => handleInputChange('paymentTerms', value)}
+            className={inputClass}
+            darkMode={darkMode}
+            placeholder="Sélectionnez les conditions de paiement"
+          />
+        ))}
+        {renderOption("Opérations", (
+          <CustomSelect
+            options={operationsOptions}
+            value={devis.operation}
+            onChange={(value) => handleInputChange('operation', value)}
+            className={inputClass}
+            darkMode={darkMode}
+            placeholder="Sélectionnez le type d'opération"
+          />
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-4 mt-4">
         {renderOption("Description", (
           <textarea
@@ -207,18 +253,6 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
             onChange={(e) => handleInputChange('commentaireInterne', e.target.value)}
             className={`${inputClass} h-24`}
             placeholder="Notes internes (non visibles par le client)"
-          />
-        ))}
-      </div>
-
-      <div className="mt-4">
-        {renderOption("Conditions de paiement", (
-          <input
-            type="text"
-            value={devis.paymentTerms}
-            onChange={(e) => handleInputChange('paymentTerms', e.target.value)}
-            className={inputClass}
-            placeholder="Ex: 50% à la commande, 50% à la livraison"
           />
         ))}
       </div>

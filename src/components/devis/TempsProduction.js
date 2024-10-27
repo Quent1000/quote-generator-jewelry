@@ -54,8 +54,11 @@ const TempsProduction = ({ devis, handleInputChange, darkMode, tauxHoraires }) =
       />
       <CustomSelect
         options={tempsOptions.minutes}
-        value={devis.tempsProduction[type]?.minutes || 0}
-        onChange={(value) => handleInputChange(`tempsProduction.${type}.minutes`, parseInt(value))}
+        value={type === 'administratif' ? Math.max(devis.tempsProduction[type]?.minutes || 0, 20) : (devis.tempsProduction[type]?.minutes || 0)}
+        onChange={(value) => {
+          const newValue = type === 'administratif' ? Math.max(parseInt(value), 20) : parseInt(value);
+          handleInputChange(`tempsProduction.${type}.minutes`, newValue);
+        }}
         className={`${inputClass} flex-1`}
         darkMode={darkMode}
         isScrollable={true}

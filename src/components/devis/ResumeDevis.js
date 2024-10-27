@@ -208,15 +208,15 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
         <Section title="Impression 3D et Fonte">
           <InfoItem 
             label="Tarif fonte" 
-            value={formatPrix(devis.tarifFonte === 'custom' ? devis.tarifFonteCustom : devis.tarifFonte)} 
+            value={`${formatPrix(devis.tarifFonte === 'custom' ? devis.tarifFonteCustom : devis.tarifFonte)} x ${devis.tarifFonteQuantite || 1} = ${formatPrix((devis.tarifFonte === 'custom' ? devis.tarifFonteCustom : devis.tarifFonte) * (devis.tarifFonteQuantite || 1))}`} 
           />
           <InfoItem 
             label="Tarif impression cire" 
-            value={formatPrix(devis.tarifImpressionCire === 'custom' ? devis.tarifImpressionCireCustom : devis.tarifImpressionCire)} 
+            value={`${formatPrix(devis.tarifImpressionCire === 'custom' ? devis.tarifImpressionCireCustom : devis.tarifImpressionCire)} x ${devis.tarifImpressionCireQuantite || 1} = ${formatPrix((devis.tarifImpressionCire === 'custom' ? devis.tarifImpressionCireCustom : devis.tarifImpressionCire) * (devis.tarifImpressionCireQuantite || 1))}`} 
           />
           <InfoItem 
             label="Tarif impression résine" 
-            value={formatPrix(devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine)} 
+            value={`${formatPrix(devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine)} x ${devis.tarifImpressionResineQuantite || 1} = ${formatPrix((devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine) * (devis.tarifImpressionResineQuantite || 1))}`} 
           />
           {devis.metal === "Or Gris Palladié" && (
             <InfoItem 
