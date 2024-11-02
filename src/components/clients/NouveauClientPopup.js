@@ -13,7 +13,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
     client: {
       informationsPersonnelles: { prenom: '', nom: '', email: '', telephone: '', telFixe: '', linkedinUrl: '' },
       entrepriseId: '',
-      relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: ['Particulier'], rating: 0 },
+      relationClient: { dateCreation: new Date().toISOString().split('T')[0], commentaireInterne: '', tags: [], rating: 0 },
     },
     entreprise: {
       nom: '',
@@ -51,10 +51,20 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
     },
     'client.informationsPersonnelles.telephone': (value) => {
       if (!value || !value.trim()) return "Le téléphone est requis";
-      // Accepte les formats: 0612345678, +33612345678, (+33)612345678, 06 12 34 56 78
-      if (!/^(\+33|0)[1-9](\d{2}){4}$/.test(value.replace(/\s/g, ''))) {
-        return "Format de téléphone invalide";
+      
+      // Nettoyer le numéro en gardant uniquement les chiffres et le +
+      const cleanedNumber = value.replace(/[^\d+]/g, '');
+      
+      // Formats acceptés :
+      // 1. Format français : 06XXXXXXXX ou +33XXXXXXXXX
+      // 2. Format international : +XXX... (au moins 8 chiffres après le +)
+      const frenchPattern = /^(?:(?:\+|00)33|0)[1-9](\d{8})$/;
+      const internationalPattern = /^\+\d{8,}$/;
+      
+      if (!frenchPattern.test(cleanedNumber) && !internationalPattern.test(cleanedNumber)) {
+        return "Format de téléphone invalide. Formats acceptés : 06XXXXXXXX, +33XXXXXXXXX, ou format international (+XXX...)";
       }
+      
       return null;
     },
     'entreprise.nom': (value, data) => {
@@ -139,7 +149,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
           entrepriseId: '',
           relationClient: {
             ...prev.client.relationClient,
-            tags: prev.client.relationClient.tags.includes('Particulier') ? prev.client.relationClient.tags : [...prev.client.relationClient.tags, 'Particulier']
+            tags: prev.client.relationClient.tags
           }
         }
       }));
@@ -161,7 +171,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
           entrepriseId: value,
           relationClient: {
             ...prev.client.relationClient,
-            tags: prev.client.relationClient.tags.filter(tag => tag !== 'Particulier')
+            tags: prev.client.relationClient.tags
           }
         }
       }));
@@ -241,7 +251,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
         throw error;
       }
     }
-    return formData.entreprise.logo;
+    return null;
   };
 
   const formatWebsite = (url) => {
@@ -269,7 +279,7 @@ const NouveauClientPopup = ({ isOpen, onClose, darkMode, onClientAdded }) => {
         const logoUrl = await uploadLogo();
         const nouvelleEntrepriseDoc = await addDoc(collection(db, 'entreprises'), {
           ...formData.entreprise,
-          logo: logoUrl,
+          logo: logoUrl || '',
           siteWeb: formatWebsite(formData.entreprise.siteWeb)
         });
         entrepriseId = nouvelleEntrepriseDoc.id;
