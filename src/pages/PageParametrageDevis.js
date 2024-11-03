@@ -96,6 +96,16 @@ const PageParametrageDevis = () => {
       "Petite impression": 20.00,
       "Moyenne impression": 30.00,
       "Grosse impression": 40.00
+    },
+    prixProtoLaiton: {
+      "Moins de 6g": 50,
+      "Moins de 12g": 75,
+      "Plus de 12g": 100
+    },
+    prixProtoArgent: {
+      "Moins de 6g": 60,
+      "Moins de 12g": 85,
+      "Plus de 12g": 110
     }
   });
   const [selectedIndex, setSelectedIndex] = useState(() => {
@@ -244,6 +254,16 @@ const PageParametrageDevis = () => {
           "Petite impression": 20.00,
           "Moyenne impression": 30.00,
           "Grosse impression": 40.00
+        },
+        prixProtoLaiton: {
+          "Moins de 6g": 50,
+          "Moins de 12g": 75,
+          "Plus de 12g": 100
+        },
+        prixProtoArgent: {
+          "Moins de 6g": 60,
+          "Moins de 12g": 85,
+          "Plus de 12g": 110
         }
       });
       const initialParametres = getInitialParametres();
@@ -789,6 +809,38 @@ const PageParametrageDevis = () => {
                     step="0.01"
                   />
                 </div>
+              </div>
+
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix Proto Laiton</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(parametres.prixProtoLaiton || {}).map(([poids, prix]) => (
+                  <div key={poids}>
+                    <label className="block mb-2">{poids}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixProtoLaiton', poids, e.target.value)}
+                      className={inputClass}
+                      step="0.01"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-xl font-semibold mb-4 mt-8">Prix Proto Argent</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(parametres.prixProtoArgent || {}).map(([poids, prix]) => (
+                  <div key={poids}>
+                    <label className="block mb-2">{poids}</label>
+                    <input
+                      type="number"
+                      value={prix}
+                      onChange={(e) => handleNestedInputChange('prixProtoArgent', poids, e.target.value)}
+                      className={inputClass}
+                      step="0.01"
+                    />
+                  </div>
+                ))}
               </div>
             </Tab.Panel>
           </Tab.Panels>

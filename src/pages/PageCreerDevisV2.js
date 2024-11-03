@@ -83,6 +83,10 @@ const PageCreerDevisV2 = () => {
     tarifImpressionCireQuantite: 1,
     tarifImpressionResine: '',
     tarifImpressionResineQuantite: 1,
+    tarifProtoLaiton: '',
+    tarifProtoLaitonQuantite: 1,
+    tarifProtoArgent: '',
+    tarifProtoArgentQuantite: 1,
     typeLivraison: '',
     prixLivraison: 0,
     remise: { type: 'pourcentage', valeur: 0 },
@@ -101,6 +105,7 @@ const PageCreerDevisV2 = () => {
     images: [], // Assurez-vous que c'est initialisé comme un tableau vide
     referenceClient: '', // Ajoutez ce champ
     operation: '', // Ajoutez ce champ
+    delaiFabrication: '', // Ajout du nouveau champ
   });
 
 
@@ -192,6 +197,10 @@ const PageCreerDevisV2 = () => {
         const devisData = devisDoc.data();
         setDevis({
           ...devisData,
+          tarifProtoLaiton: devisData.tarifProtoLaiton || '',
+          tarifProtoLaitonQuantite: devisData.tarifProtoLaitonQuantite || 1,
+          tarifProtoArgent: devisData.tarifProtoArgent || '',
+          tarifProtoArgentQuantite: devisData.tarifProtoArgentQuantite || 1,
           createdByUser: devisData.createdByUser || { prenom: 'Non spécifié', nom: 'Non spécifié' },
           createdAt: devisData.createdAt || new Date().toISOString(),
         });

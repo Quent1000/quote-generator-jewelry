@@ -24,10 +24,8 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
 
   const categorieOptions = Object.keys(categories).map(cat => ({ value: cat, label: cat }));
   const sousCategorieOptions = devis.categorie && categories[devis.categorie]
-    ? [{ value: '', label: 'Sélectionner' }].concat(
-        categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
-      )
-    : [{ value: '', label: 'Sélectionner' }];
+    ? categories[devis.categorie].map(subCat => ({ value: subCat, label: subCat }))
+    : [];
 
   const ordrePersonnalise = ['Or Jaune 3N', 'Or Gris', 'Or Rouge 5N', 'Or Gris Palladié'];
 
@@ -206,7 +204,7 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-4 gap-4 mt-4">
         {renderOption("Référence client", (
           <input
             type="text"
@@ -234,6 +232,16 @@ const InformationsEtDetails = ({ devis, handleInputChange, handleClientChange, s
             className={inputClass}
             darkMode={darkMode}
             placeholder="Sélectionnez le type d'opération"
+          />
+        ))}
+        {renderOption("Délai de fabrication (jours ouvrés)", (
+          <input
+            type="number"
+            value={devis.delaiFabrication || ''}
+            onChange={(e) => handleInputChange('delaiFabrication', parseInt(e.target.value) || '')}
+            className={inputClass}
+            min="1"
+            placeholder="Nombre de jours"
           />
         ))}
       </div>

@@ -151,6 +151,10 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
             label="Date de création" 
             value={devis.createdAt ? new Date(devis.createdAt).toLocaleDateString() : 'En attente de création'} 
           />
+          <InfoItem 
+            label="Délai de fabrication" 
+            value={devis.delaiFabrication ? `${devis.delaiFabrication} jours ouvrés` : 'À définir'} 
+          />
         </Section>
 
         <Section title="Détails du produit">
@@ -217,6 +221,14 @@ const ResumeDevis = React.memo(({ devis, darkMode, clients, parametres, handleIn
           <InfoItem 
             label="Tarif impression résine" 
             value={`${formatPrix(devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine)} x ${devis.tarifImpressionResineQuantite || 1} = ${formatPrix((devis.tarifImpressionResine === 'custom' ? devis.tarifImpressionResineCustom : devis.tarifImpressionResine) * (devis.tarifImpressionResineQuantite || 1))}`} 
+          />
+          <InfoItem 
+            label="Proto Laiton" 
+            value={`${formatPrix(devis.tarifProtoLaiton || 0)} x ${devis.tarifProtoLaitonQuantite || 1} = ${formatPrix((devis.tarifProtoLaiton || 0) * (devis.tarifProtoLaitonQuantite || 1))}`} 
+          />
+          <InfoItem 
+            label="Proto Argent" 
+            value={`${formatPrix(devis.tarifProtoArgent || 0)} x ${devis.tarifProtoArgentQuantite || 1} = ${formatPrix((devis.tarifProtoArgent || 0) * (devis.tarifProtoArgentQuantite || 1))}`} 
           />
           {devis.metal === "Or Gris Palladié" && (
             <InfoItem 

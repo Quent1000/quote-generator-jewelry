@@ -69,11 +69,15 @@ export const calculerTotalImpression3DEtFonte = (devis, parametres) => {
   const tarifFonte = devis.tarifFonte === 'custom' ? parseFloat(devis.tarifFonteCustom || 0) : parseFloat(devis.tarifFonte || 0);
   const tarifImpressionCire = devis.tarifImpressionCire === 'custom' ? parseFloat(devis.tarifImpressionCireCustom || 0) : parseFloat(devis.tarifImpressionCire || 0);
   const tarifImpressionResine = devis.tarifImpressionResine === 'custom' ? parseFloat(devis.tarifImpressionResineCustom || 0) : parseFloat(devis.tarifImpressionResine || 0);
+  const tarifProtoLaiton = parseFloat(devis.tarifProtoLaiton || 0);
+  const tarifProtoArgent = parseFloat(devis.tarifProtoArgent || 0);
   
   const totalSansMarge = 
     tarifFonte * (devis.tarifFonteQuantite || 1) +
     tarifImpressionCire * (devis.tarifImpressionCireQuantite || 1) +
-    tarifImpressionResine * (devis.tarifImpressionResineQuantite || 1);
+    tarifImpressionResine * (devis.tarifImpressionResineQuantite || 1) +
+    tarifProtoLaiton * (devis.tarifProtoLaitonQuantite || 1) +
+    tarifProtoArgent * (devis.tarifProtoArgentQuantite || 1);
   
   return appliquerMarge(totalSansMarge, parametres.margeGlobale || 0);
 };
