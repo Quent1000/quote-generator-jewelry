@@ -1,5 +1,6 @@
 import React from 'react';
 import DarkModeToggle from './DarkModeToggle';
+import { Link } from 'react-router-dom';
 
 const Navigation = ({ darkMode, toggleDarkMode }) => {
   return (
@@ -10,6 +11,9 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
         <DarkModeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
         <button className="ml-4">Déconnexion</button>
       </div>
+      <Link to="/devis-advanced" className="nav-link">
+        Devis Avancé (Google Sheets)
+      </Link>
     </nav>
   );
 };

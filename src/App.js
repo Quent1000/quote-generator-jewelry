@@ -14,6 +14,7 @@ import PageGestionUtilisateurs from './pages/PageGestionUtilisateurs';
 import withRoleAccess from './components/auth/withRoleAccess';
 import PageAccueil from './pages/PageAccueil';
 import PageDevis from './pages/PageDevis';
+import DevisAdvancedPage from './components/devisAdvanced/DevisAdvancedPage';
 
 const App = () => {
   return (
@@ -53,6 +54,7 @@ const AppContent = () => {
           <Route path="/creer-devis-v2" element={<PageCreerDevisV2 />} />
           <Route path="/devis" element={<PageDevis />} />
           <Route path="/modifier-devis/:devisId" element={<PageCreerDevisV2 />} />
+          <Route path="/devis-advanced" element={<DevisAdvancedPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
